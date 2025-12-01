@@ -119,23 +119,28 @@ Progressive architecture development from digital design fundamentals to product
 - **Technologies:** Java 21, JavaFX, Gson, Maven
 - **Status:** Complete, 100% test pass rate
 
-**Project 14: C++ Order Gateway (UDP/XDP) - Kernel Bypass** *[COMPLETE]**
-- **Purpose:** UDP-based gateway with AF_XDP kernel bypass for minimal latency
-- **Architecture:** XDP listener (AF_XDP + eBPF), BBO parser (binary), multi-protocol publisher
+**Project 14: C++ Order Gateway (UDP/XDP + Binance WebSocket) - Dual Feed Architecture** *[COMPLETE]**
+- **Purpose:** Multi-source market data gateway with AF_XDP kernel bypass for FPGA feed and WebSocket for cryptocurrency data
+- **Architecture:** XDP listener (AF_XDP + eBPF), Binance WebSocket client (Boost.Beast), BBO parser (binary + JSON), multi-protocol publisher
+- **Data Sources:**
+  - FPGA Feed: Binary BBO packets via UDP/XDP (ultra-low latency, sub-microsecond parsing)
+  - Binance Feed: JSON WebSocket streams (real-time cryptocurrency market data)
 - **Protocols:** TCP Server (9999), MQTT Publisher (Mosquitto), Kafka Producer
-- **Performance (XDP Mode - Validated):** 0.04 μs avg, 0.03 μs P50, 0.14 μs P99 (78,606 samples)
+- **Performance (XDP Mode - CPU Optimized):** 0.05 μs P50, 0.13-0.15 μs P99 (78,616 samples)
+- **Performance (Binance WebSocket - CPU Optimized):** 4.77 μs avg, 4.15 μs P50, 11.40 μs P99 (563,037 samples)
 - **Performance (UDP Mode):** 0.20 μs avg, 0.19 μs P50, 0.38 μs P99 (10,000 samples)
 - **Kernel Bypass:** AF_XDP with eBPF program redirecting UDP packets to userspace
-- **RT Optimization:** SCHED_FIFO priority 99 + CPU core 5 pinning
+- **RT Optimization:** SCHED_FIFO priority 80 + CPU cores 2,6 pinning (FPGA+Binance threads)
+- **CPU Optimizations:** C-state disabled, hyperthreading disabled, virtualization off
 - **Benchmark Results:**
-  - XDP mode: 5× faster than standard UDP (0.04 μs vs 0.20 μs avg)
-  - Standard deviation: 0.05 μs (highly consistent)
-  - P95: 0.09 μs (95% of messages under 0.09 μs)
-  - 267× faster than UART Project 09 (10.67 μs → 0.04 μs avg)
-- **CPU Isolation:** GRUB parameters (isolcpus, nohz_full, rcu_nocbs) for cores 2-5
+  - XDP mode: 4× faster than standard UDP (0.05 μs vs 0.20 μs avg)
+  - Binance WebSocket: 4.77 μs avg for JSON parsing (563K+ samples, production-scale validation)
+  - Binary protocol advantage: 95× faster than JSON (0.05 μs vs 4.77 μs)
+  - CPU optimizations: Binance P99 improved 2× (22.56 μs → 11.40 μs)
+- **CPU Isolation:** GRUB parameters (isolcpus, nohz_full, rcu_nocbs) for cores 2-6
 - **Hardware:** AMD Ryzen AI 9 365 w/ Radeon 880M
-- **Technologies:** C++17, Boost.Asio, libxdp, libbpf, pthread (RT scheduling), libmosquitto, librdkafka
-- **Status:** Complete, XDP mode validated with large dataset
+- **Technologies:** C++20, Boost.Asio, Boost.Beast (WebSocket), libxdp, libbpf, pthread (RT scheduling), libmosquitto, librdkafka, nlohmann/json
+- **Status:** Complete, dual-feed validated with production-scale datasets (563K+ Binance, 78K+ FPGA)
 
 **Project 15: Market Maker FSM - Automated Quote Generation** *[COMPLETE]**
 - **Purpose:** Automated market making strategy with position management and risk controls

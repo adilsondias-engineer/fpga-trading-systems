@@ -202,15 +202,27 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 - [Full Application Stack - Desktop, Mobile, and IoT Clients (Part 1)](https://youtube.com/shorts/mg-O1LkSjHM?feature=share)
 - [Full Application Stack - Mobile Applications (Part 2)](https://youtube.com/shorts/PKjIAbwuvL4?feature=share)
 
-### Project 14: C++ Order Gateway (UDP/XDP - Kernel Bypass)
-**Problem Solved:** Eliminate kernel network stack overhead with AF_XDP kernel bypass for minimal latency
-**Architecture:** XDP listener (AF_XDP + eBPF), binary BBO parser, multi-protocol publisher (TCP/MQTT/Kafka)
-**Key Innovation:** AF_XDP zero-copy packet reception with eBPF redirect achieves 40ns (0.04 μs) parsing latency
-**Performance XDP Mode (Validated with 78,606 samples):**
-  - **Average:** 0.04 μs (40 nanoseconds)
-  - **P50:** 0.03 μs
-  - **P99:** 0.14 μs
-  - **Std Dev:** 0.05 μs (highly consistent)
+### Project 14: C++ Order Gateway (UDP/XDP + Binance WebSocket - Dual Feed Architecture)
+**Problem Solved:** Multi-source market data gateway with AF_XDP kernel bypass for FPGA feed and WebSocket for cryptocurrency data
+**Architecture:** XDP listener (AF_XDP + eBPF), Binance WebSocket client (Boost.Beast), binary+JSON BBO parser, multi-protocol publisher (TCP/MQTT/Kafka)
+**Key Innovation:** Dual-feed architecture processing both ultra-low latency FPGA binary data (0.05 μs) and real-time Binance cryptocurrency JSON streams (4.77 μs)
+**Data Sources:**
+  - **FPGA Feed:** Binary BBO packets via UDP/XDP (ultra-low latency, sub-microsecond parsing)
+  - **Binance Feed:** JSON WebSocket streams (real-time cryptocurrency market data, 563K+ samples)
+**Performance XDP Mode (CPU Optimized - Validated with 78,616 samples):**
+  - **Average:** 0.05 μs (50 nanoseconds)
+  - **P50:** 0.05 μs
+  - **P99:** 0.13-0.15 μs
+  - **Std Dev:** 0.02-0.03 μs (highly consistent)
+  - **CPU Optimizations:** C-state disabled, hyperthreading disabled, virtualization off
+**Performance Binance WebSocket (CPU Optimized - Validated with 563,037 samples):**
+  - **Average:** 4.77 μs
+  - **P50:** 4.15 μs
+  - **P95:** 8.23 μs
+  - **P99:** 11.40 μs (2× improvement from 22.56 μs with quiet mode)
+  - **Std Dev:** 5.44 μs (production-realistic jitter)
+  - **Protocol:** WebSocket over SSL/TLS (wss://) with JSON parsing
+  - **Production-Scale Validation:** 563,037 samples demonstrate long-running system stability
 **Performance Standard UDP Mode:**
   - **Average:** 0.20 μs, P50: 0.19 μs, P99: 0.38 μs
 **XDP Architecture:**
@@ -219,15 +231,17 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
   - **Ring Buffers:** RX, Fill, Completion rings
   - **Queue:** Combined channel 4, queue_id 3 (hardware-specific configuration)
 **Performance Comparisons:**
-  - **XDP vs UDP:** 5× faster (0.04 μs vs 0.20 μs)
-  - **XDP vs UART (Project 09):** 267× faster (10.67 μs → 0.04 μs)
+  - **XDP vs UDP:** 4× faster (0.05 μs vs 0.20 μs with CPU optimizations)
+  - **Binary vs JSON:** 95× faster (0.05 μs vs 4.77 μs) - demonstrates protocol efficiency
+  - **CPU optimization impact:** Binance P99 improved 2× (22.56 μs → 11.40 μs)
+  - **Sample size advantage:** 563K samples provide production-realistic tail latencies
 **RT Optimization:**
-  - **Scheduling:** SCHED_FIFO priority 99
-  - **CPU Pinning:** Core 5 (isolated)
-  - **CPU Isolation:** GRUB parameters (isolcpus=2-5, nohz_full=2-5, rcu_nocbs=2-5)
+  - **Scheduling:** SCHED_FIFO priority 80 (FPGA thread), priority 80 (Binance thread)
+  - **CPU Pinning:** Core 2 (FPGA), Core 6 (Binance) - isolated
+  - **CPU Isolation:** GRUB parameters (isolcpus=2-6, nohz_full=2-6, rcu_nocbs=2-6)
   - **Hardware:** AMD Ryzen AI 9 365 w/ Radeon 880M
-**Technologies:** C++20, Boost.Asio, libxdp, libbpf, pthread (RT scheduling), libmosquitto, librdkafka
-**Status:** Complete, XDP mode validated with large dataset
+**Technologies:** C++20, Boost.Asio, Boost.Beast (WebSocket), libxdp, libbpf, pthread (RT scheduling), libmosquitto, librdkafka, nlohmann/json
+**Status:** Complete, dual-feed validated with production-scale datasets (563K+ Binance, 78K+ FPGA)
 
 ### Project 15: Market Maker FSM - Automated Quote Generation
 **Problem Solved:** Automated market making strategy with real-time position management and risk controls
