@@ -28,8 +28,8 @@ public:
         int quote_size = 100;
         double max_notional = 100000.0;
         bool enable_order_execution = false;
-        std::string order_ring_path = "/dev/shm/order_ring_mm";
-        std::string fill_ring_path = "/dev/shm/fill_ring_oe";
+        std::string order_ring_path = "order_ring_mm";
+        std::string fill_ring_path = "fill_ring_oe";
     };
 
     explicit MarketMakerFSM(const Config& config);

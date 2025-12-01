@@ -18,6 +18,7 @@ Hardware-accelerated market data processing and order book management for low-la
 
 **Domain Expertise:** Combining software engineering experience with active trading knowledge to build FPGA-based market data systems and order management infrastructure.
 
+
 ## Hardware
 
 - Xilinx Arty A7-100T Development Board
