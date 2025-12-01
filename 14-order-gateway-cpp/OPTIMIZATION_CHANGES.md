@@ -267,19 +267,6 @@ make -j4
 **No new dependencies required** - all optimizations use existing C++17/Boost features.
 
 ---
-
-## Testing Checklist
-
-- [x] Build succeeds with optimizations
-- [ ] Wired test with `--quiet` shows ~0.20 μs avg
-- [ ] Console output disabled when `--quiet` flag used
-- [ ] Performance stats still printed on shutdown
-- [ ] TCP/MQTT/Kafka distribution still works
-- [ ] Thread-local buffer doesn't cause memory leaks
-- [ ] Multi-threaded access to `bbo_to_json()` is safe
-
----
-
 **Last Updated:** 2025-11-22
 **Status:** Optimizations implemented and ready for testing
 **Expected Result:** 0.18-0.20 μs average latency on wired connection with --quiet flag
