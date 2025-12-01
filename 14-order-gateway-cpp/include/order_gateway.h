@@ -5,6 +5,7 @@
 #ifdef USE_XDP
 #include "xdp_listener.h"
 #endif
+#include "binance_ws_client.h"
 #include "tcp_server.h"
 #include "csv_logger.h"
 #include "mqtt.h"
@@ -82,6 +83,14 @@ namespace gateway
 
             // Disruptor mode (shared memory ring buffer for Project 15)
             bool enable_disruptor = false;
+
+            // FPGA feed configuration
+            bool enable_fpga = true;  // Enable FPGA UDP/XDP feed (default: true)
+
+            // Binance WebSocket configuration
+            bool enable_binance = false;
+            std::vector<std::string> binance_symbols;  // e.g., {"BTCUSDT", "ETHUSDT"}
+            std::string binance_stream_type = "bookTicker";  // Stream type
         };
 
         /**
@@ -124,6 +133,7 @@ namespace gateway
 #ifdef USE_XDP
         std::unique_ptr<XDPListener> xdp_listener_;
 #endif
+        std::unique_ptr<BinanceWSClient> binance_client_;
         std::unique_ptr<TCPServer> tcp_server_;
         std::unique_ptr<MQTT> mqtt_;
         std::unique_ptr<KafkaProducer> kafka_;
@@ -140,6 +150,7 @@ namespace gateway
 
         // Threading
         std::thread udp_thread_;
+        std::thread binance_thread_;
         std::thread publish_thread_;
         std::atomic<bool> running_;
         std::atomic<bool> stopped_;
@@ -149,14 +160,19 @@ namespace gateway
 
         // Thread functions
         void udpThreadFunc();
+        void binanceThreadFunc();
         void publishThreadFunc();
+
+        // Binance callback
+        void onBinanceBBO(const BBOData& bbo);
 
         // Helper functions
         void publishBBO(const BBOData &bbo);
         void logBBO(const BBOData &bbo);
 
         // Performance monitoring
-        gateway::PerfMonitor parse_latency_;
+        gateway::PerfMonitor parse_latency_;  // For FPGA (UDP/XDP) feed
+        gateway::PerfMonitor binance_parse_latency_;  // For Binance WebSocket feed
     };
 
 } // namespace gateway

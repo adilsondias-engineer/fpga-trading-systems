@@ -13,6 +13,7 @@ endif()
 find_package(eclipse-paho-mqtt-c CONFIG REQUIRED)
 find_package(RdKafka CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG QUIET)
 
 # Define _WIN32_WINNT for Windows
 if(WIN32)
@@ -42,6 +43,8 @@ set(SOURCES
     src/order_gateway.cpp
     src/udp_listener.cpp
     src/bbo_parser.cpp
+    src/binance_parser.cpp
+    src/binance_ws_client.cpp
     src/tcp_server.cpp
     src/csv_logger.cpp
     src/mqtt.cpp
@@ -89,6 +92,15 @@ target_link_libraries(order_gateway PRIVATE Threads::Threads)
 
 # Link spdlog for logging
 target_link_libraries(order_gateway PRIVATE spdlog::spdlog)
+
+# Link nlohmann_json for JSON parsing (Binance WebSocket)
+if(nlohmann_json_FOUND)
+    target_link_libraries(order_gateway PRIVATE nlohmann_json::nlohmann_json)
+    message(STATUS "nlohmann_json found: ${nlohmann_json_VERSION}")
+else()
+    message(WARNING "nlohmann_json not found - Binance integration will not compile")
+    message(WARNING "Install via vcpkg: vcpkg install nlohmann-json")
+endif()
 
 # Boost.Asio integration
 # Try to find Boost (works with vcpkg if vcpkg toolchain is set)

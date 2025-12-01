@@ -1,0 +1,80 @@
+{
+    "log_level": "info",
+    "fpga": {
+        "enable": false,
+        "udp_ip": "0.0.0.0",
+        "udp_port": 5000,
+        "use_xdp": false,
+        "xdp_interface": "eno2",
+        "xdp_queue_id": 0,
+        "enable_xdp_debug": false
+    },
+    "binance": {
+        "enable": true,
+        "symbols": [
+            "BTCUSDT",
+            "ETHUSDT",
+            "SOLUSDT",
+            "XRPUSDT",
+            "DOGEUSDT",
+            "DOTUSDT",
+            "LINKUSDT",
+            "UNIUSDT",
+            "XLMUSDT",
+            "XMRUSDT",
+            "ZECUSDT",
+            "ETHBTC",
+            "SOLBTC",
+            "XRPBTC",
+            "DOGEBTC",
+            "DOTBTC",
+            "LINKBTC",
+            "UNIBTC",
+            "XLMBTC",
+            "XMIBTC",
+            "ZECBTC",
+            "BTCETH",
+            "SOLETH",
+            "XRPETH",
+            "DOGEETH",
+            "DOTETH",
+            "LINKETH",
+            "UNIETH",
+            "XLMETH",
+            "XMIETH",
+            "ZECETH"
+        ],
+        "stream_type": "bookTicker"
+    },
+    "tcp": {
+        "enable": true,
+        "port": 9999
+    },
+    "mqtt": {
+        "enable": true,
+        "broker_url": "mqtt://192.168.0.2:1883",
+        "client_id": "order_gateway",
+        "username": "trading",
+        "password": "trading123",
+        "topic": "bbo_messages"
+    },
+    "kafka": {
+        "enable": false,
+        "broker_url": "192.168.0.203:9092",
+        "client_id": "order_gateway",
+        "topic": "bbo_messages"
+    },
+    "csv_logger": {
+        "enable": false,
+        "file": ""
+    },
+    "disruptor": {
+        "enable": false,
+        "shm_name": "gateway"
+    },
+    "performance": {
+        "enable_rt": false,
+        "quiet_mode": false,
+        "benchmark_mode": false
+    }
+}

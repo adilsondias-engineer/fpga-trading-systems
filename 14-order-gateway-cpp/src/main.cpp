@@ -1,20 +1,13 @@
 #include "order_gateway.h"
 
-#include <iostream>
+#include <fstream>
 #include <stdexcept>
 #include <csignal>
 #include <memory>
-
-// Default configuration
-#define DEFAULT_MQTT_BROKER_URL "mqtt://192.168.0.2:1883"
-#define DEFAULT_MQTT_CLIENT_ID "order_gateway"
-#define DEFAULT_MQTT_USERNAME "trading"
-#define DEFAULT_MQTT_PASSWORD "trading123"
-#define DEFAULT_MQTT_TOPIC "bbo_messages"
-
-#define DEFAULT_KAFKA_BROKER_URL "192.168.0.203:9092"
-#define DEFAULT_KAFKA_CLIENT_ID "order_gateway"
-#define DEFAULT_KAFKA_TOPIC "bbo_messages"
+#include <sstream>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <nlohmann/json.hpp>
 
 using namespace gateway;
 
@@ -23,7 +16,7 @@ std::unique_ptr<OrderGateway> g_gateway;
 
 void signal_handler(int signal)
 {
-    std::cout << "\nShutdown signal received (" << signal << ")" << std::endl;
+    spdlog::info("Shutdown signal received ({})", signal);
     if (g_gateway)
     {
         g_gateway->stop();
@@ -32,172 +25,227 @@ void signal_handler(int signal)
 
 void print_usage(const char *program_name)
 {
-    std::cout << "Usage: " << program_name << " <udp-ip> <udp-port> [options]" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Arguments:" << std::endl;
-    std::cout << "  udp-ip IP  - UDP IP address (default: 0.0.0.0)" << std::endl;
-    std::cout << "  udp-port PORT - UDP port name (e.g., 5000)" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Options:" << std::endl;
-    std::cout << "  --tcp-port PORT     - TCP port for JSON output (default: 9999)" << std::endl;
-    std::cout << "  --csv-file FILE     - CSV log file (optional)" << std::endl;
-    std::cout << "  --mqtt-broker URL   - MQTT broker URL (default: " << DEFAULT_MQTT_BROKER_URL << ")" << std::endl;
-    std::cout << "  --mqtt-topic TOPIC  - MQTT topic (default: " << DEFAULT_MQTT_TOPIC << ")" << std::endl;
-    std::cout << "  --kafka-broker URL  - Kafka broker URL (default: " << DEFAULT_KAFKA_BROKER_URL << ")" << std::endl;
-    std::cout << "  --kafka-topic TOPIC - Kafka topic (default: " << DEFAULT_KAFKA_TOPIC << ")" << std::endl;
-    std::cout << "  --disable-kafka     - Disable Kafka (default: false)" << std::endl;
-    std::cout << "  --disable-mqtt     - Disable MQTT (default: false)" << std::endl;
-    std::cout << "  --disable-tcp      - Disable TCP (default: false)" << std::endl;
-    std::cout << "  --disable-logger   - Disable logger (default: false)" << std::endl;
-    std::cout << "  --enable-rt        - Enable real-time optimizations (SCHED_FIFO + CPU pinning)" << std::endl;
-    std::cout << "  --quiet            - Suppress console BBO output (improves latency)" << std::endl;
-    std::cout << "  --benchmark        - Benchmark mode (single-threaded, no queue, parse-only)" << std::endl;
-    std::cout << "  --enable-disruptor - Enable Disruptor (shared memory ring buffer for Project 15)" << std::endl;
+    spdlog::info("Usage: {} [config_file]", program_name);
+    spdlog::info("");
+    spdlog::info("Arguments:");
+    spdlog::info("  config_file  - Path to config.json file (default: config.json)");
+    spdlog::info("");
+    spdlog::info("Example:");
+    spdlog::info("  {} config.json", program_name);
+    spdlog::info("  {} /path/to/config.json", program_name);
+}
+
+OrderGateway::Config load_config(const std::string& config_file)
+{
+    OrderGateway::Config config;
+
+    std::ifstream config_stream(config_file);
+    if (!config_stream.is_open())
+    {
+        throw std::runtime_error("Failed to open config file: " + config_file);
+    }
+
+    try
+    {
+        nlohmann::json config_json;
+        config_stream >> config_json;
+
+        // Load log level
+        if (config_json.contains("log_level"))
+        {
+            std::string log_level = config_json["log_level"].get<std::string>();
+            if (log_level == "trace") spdlog::set_level(spdlog::level::trace);
+            else if (log_level == "debug") spdlog::set_level(spdlog::level::debug);
+            else if (log_level == "info") spdlog::set_level(spdlog::level::info);
+            else if (log_level == "warn") spdlog::set_level(spdlog::level::warn);
+            else if (log_level == "error") spdlog::set_level(spdlog::level::err);
+            else if (log_level == "critical") spdlog::set_level(spdlog::level::critical);
+        }
+
+        // Load FPGA configuration
+        if (config_json.contains("fpga"))
+        {
+            auto& fpga = config_json["fpga"];
+            if (fpga.contains("enable"))
+            {
+                config.enable_fpga = fpga["enable"];
+            }
+            if (fpga.contains("udp_ip"))
+            {
+                config.udp_ip = fpga["udp_ip"].get<std::string>();
+            }
+            if (fpga.contains("udp_port"))
+            {
+                config.udp_port = fpga["udp_port"];
+            }
 #ifdef USE_XDP
-    std::cout << "  --use-xdp          - Use AF_XDP for kernel bypass (requires XDP program loaded)" << std::endl;
-    std::cout << "  --xdp-interface IFACE - Network interface for XDP (default: eno2)" << std::endl;
-    std::cout << "  --xdp-queue-id ID  - XDP queue ID (default: 0)" << std::endl;
-    std::cout << "  --enable-xdp-debug - Enable XDP debug logging (default: disabled)" << std::endl;
+            if (fpga.contains("use_xdp"))
+            {
+                config.use_xdp = fpga["use_xdp"];
+            }
+            if (fpga.contains("xdp_interface"))
+            {
+                config.xdp_interface = fpga["xdp_interface"].get<std::string>();
+            }
+            if (fpga.contains("xdp_queue_id"))
+            {
+                config.xdp_queue_id = fpga["xdp_queue_id"];
+            }
+            if (fpga.contains("enable_xdp_debug"))
+            {
+                config.enable_xdp_debug = fpga["enable_xdp_debug"];
+            }
 #endif
-    std::cout << std::endl;
-    std::cout << "Examples:" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --tcp-port 9999" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --csv-file bbo_log.csv" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --mqtt-broker mqtt://localhost:1883" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --kafka-broker localhost:9092" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --disable-kafka" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --disable-mqtt" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --disable-tcp" << std::endl;
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --disable-logger" << std::endl;
-    std::cout << "  " << program_name << " 192.168.0.99 5000 --enable-rt  # RT optimizations" << std::endl;
-#ifdef USE_XDP
-    std::cout << "  " << program_name << " 0.0.0.0 5000 --use-xdp --xdp-interface eno2  # XDP mode" << std::endl;
-#endif
+        }
+
+        // Load Binance configuration
+        if (config_json.contains("binance"))
+        {
+            auto& binance = config_json["binance"];
+            if (binance.contains("enable"))
+            {
+                config.enable_binance = binance["enable"];
+            }
+            if (binance.contains("symbols"))
+            {
+                config.binance_symbols = binance["symbols"].get<std::vector<std::string>>();
+            }
+            if (binance.contains("stream_type"))
+            {
+                config.binance_stream_type = binance["stream_type"].get<std::string>();
+            }
+        }
+
+        // Load TCP configuration
+        if (config_json.contains("tcp"))
+        {
+            auto& tcp = config_json["tcp"];
+            if (tcp.contains("enable"))
+            {
+                config.disable_tcp = !tcp["enable"];
+            }
+            if (tcp.contains("port"))
+            {
+                config.tcp_port = tcp["port"];
+            }
+        }
+
+        // Load MQTT configuration
+        if (config_json.contains("mqtt"))
+        {
+            auto& mqtt = config_json["mqtt"];
+            if (mqtt.contains("enable"))
+            {
+                config.disable_mqtt = !mqtt["enable"];
+            }
+            if (mqtt.contains("broker_url"))
+            {
+                config.mqtt_broker_url = mqtt["broker_url"].get<std::string>();
+            }
+            if (mqtt.contains("client_id"))
+            {
+                config.mqtt_client_id = mqtt["client_id"].get<std::string>();
+            }
+            if (mqtt.contains("username"))
+            {
+                config.mqtt_username = mqtt["username"].get<std::string>();
+            }
+            if (mqtt.contains("password"))
+            {
+                config.mqtt_password = mqtt["password"].get<std::string>();
+            }
+            if (mqtt.contains("topic"))
+            {
+                config.mqtt_topic = mqtt["topic"].get<std::string>();
+            }
+        }
+
+        // Load Kafka configuration
+        if (config_json.contains("kafka"))
+        {
+            auto& kafka = config_json["kafka"];
+            if (kafka.contains("enable"))
+            {
+                config.disable_kafka = !kafka["enable"];
+            }
+            if (kafka.contains("broker_url"))
+            {
+                config.kafka_broker_url = kafka["broker_url"].get<std::string>();
+            }
+            if (kafka.contains("client_id"))
+            {
+                config.kafka_client_id = kafka["client_id"].get<std::string>();
+            }
+            if (kafka.contains("topic"))
+            {
+                config.kafka_topic = kafka["topic"].get<std::string>();
+            }
+        }
+
+        // Load CSV logger configuration
+        if (config_json.contains("csv_logger"))
+        {
+            auto& csv = config_json["csv_logger"];
+            if (csv.contains("enable"))
+            {
+                config.disable_logger = !csv["enable"];
+            }
+            if (csv.contains("file"))
+            {
+                config.csv_file = csv["file"].get<std::string>();
+            }
+        }
+
+        // Load Disruptor configuration
+        if (config_json.contains("disruptor"))
+        {
+            auto& disruptor = config_json["disruptor"];
+            if (disruptor.contains("enable"))
+            {
+                config.enable_disruptor = disruptor["enable"];
+            }
+            // Note: shm_name is handled internally by Disruptor, not needed here
+        }
+
+        // Load performance configuration
+        if (config_json.contains("performance"))
+        {
+            auto& perf = config_json["performance"];
+            if (perf.contains("enable_rt"))
+            {
+                config.enable_rt = perf["enable_rt"];
+            }
+            if (perf.contains("quiet_mode"))
+            {
+                config.quiet_mode = perf["quiet_mode"];
+            }
+            if (perf.contains("benchmark_mode"))
+            {
+                config.benchmark_mode = perf["benchmark_mode"];
+            }
+        }
+
+        spdlog::info("Loaded config from {}", config_file);
+    }
+    catch (const std::exception& e)
+    {
+        throw std::runtime_error("Failed to parse config file: " + std::string(e.what()));
+    }
+
+    return config;
 }
 
 int main(int argc, char **argv)
 {
-    // Parse command-line arguments
-    if (argc < 2)
-    {
-        print_usage(argv[0]);
-        return 1;
-    }
+    // Initialize spdlog
+    auto console = spdlog::stdout_color_mt("order_gateway");
+    spdlog::set_default_logger(console);
+    spdlog::set_level(spdlog::level::info);  // Default to info
 
-    // Parse arguments (simple parser - can be enhanced)
-    std::string udp_ip = argv[1];
-    int udp_port = 5000;
-    int tcp_port = 9999;
-    bool disable_kafka = false;
-    bool disable_mqtt = false;
-    bool disable_tcp = false;
-    bool disable_logger = false;
-    bool enable_rt = false;
-    bool quiet_mode = false;
-    bool benchmark_mode = false;
-    bool enable_disruptor = false;
-    bool use_xdp = false;
-    std::string xdp_interface = "eno2";
-    int xdp_queue_id = 0;
-    bool enable_xdp_debug = false;
-    std::string csv_file;
-    std::string mqtt_broker;
-    std::string mqtt_topic;
-    std::string kafka_broker;
-    std::string kafka_topic;
-    // Optional positional UDP port as second argument
-    if (argc >= 3 && argv[2][0] != '-')
+    std::string config_file = "config.json";
+    if (argc > 1)
     {
-        try { udp_port = std::stoi(argv[2]); } catch (...) {}
-    }
-
-    // Simple argument parsing
-    for (int i = 2; i < argc; i++)
-    { 
-        std::string arg = argv[i];
-        if (arg == "--udp-ip" && i + 1 < argc)
-        {
-            udp_ip = argv[++i];
-        }
-        else if (arg == "--udp-port" && i + 1 < argc)
-        {
-            udp_port = std::stoi(argv[++i]);
-        }
-        else if (arg == "--tcp-port" && i + 1 < argc)
-        {
-            tcp_port = std::stoi(argv[++i]);
-        } 
-        else if (arg == "--csv-file" && i + 1 < argc)
-        {
-            csv_file = argv[++i];
-        }
-        else if (arg == "--mqtt-broker" && i + 1 < argc)
-        {
-            mqtt_broker = argv[++i];
-        }
-        else if (arg == "--mqtt-topic" && i + 1 < argc)
-        {
-            mqtt_topic = argv[++i];
-        }
-        else if (arg == "--kafka-broker" && i + 1 < argc)
-        {
-            kafka_broker = argv[++i];
-        }
-        else if (arg == "--kafka-topic" && i + 1 < argc)
-        {
-            kafka_topic = argv[++i];
-        }
-        else if (arg == "--disable-kafka")
-        {
-            disable_kafka = true;
-        }
-        else if (arg == "--disable-mqtt")
-        {
-            disable_mqtt = true;
-        }
-        else if (arg == "--disable-tcp")  
-        {
-            disable_tcp = true;
-        }
-        else if (arg == "--disable-logger")
-        {
-            disable_logger = true;
-        }
-        else if (arg == "--enable-rt")
-        {
-            enable_rt = true;
-        }
-        else if (arg == "--quiet")
-        {
-            quiet_mode = true;
-        }
-        else if (arg == "--benchmark")
-        {
-            benchmark_mode = true;
-        }
-        else if (arg == "--enable-disruptor")
-        {
-            enable_disruptor = true;
-        }
-#ifdef USE_XDP
-        else if (arg == "--use-xdp")
-        {
-            use_xdp = true;
-        }
-        else if (arg == "--xdp-interface" && i + 1 < argc)
-        {
-            xdp_interface = argv[++i];
-        }
-        else if (arg == "--xdp-queue-id" && i + 1 < argc)
-        {
-            xdp_queue_id = std::stoi(argv[++i]);
-        }
-        else if (arg == "--enable-xdp-debug")
-        {
-            enable_xdp_debug = true;
-        }
-#endif
+        config_file = argv[1];
     }
 
     // Install signal handler for graceful shutdown
@@ -206,51 +254,25 @@ int main(int argc, char **argv)
 
     try
     {
-        // Create gateway configuration
-        OrderGateway::Config config;
-        config.udp_ip = udp_ip;
-        config.udp_port = udp_port;
-        config.tcp_port = tcp_port;
-        config.csv_file = csv_file;
-        config.mqtt_broker_url = mqtt_broker;
-        config.mqtt_client_id = DEFAULT_MQTT_CLIENT_ID;
-        config.mqtt_username = DEFAULT_MQTT_USERNAME;
-        config.mqtt_password = DEFAULT_MQTT_PASSWORD;
-        config.mqtt_topic = mqtt_topic;
-        config.kafka_broker_url = kafka_broker;
-        config.kafka_client_id = DEFAULT_KAFKA_CLIENT_ID;
-        config.kafka_topic = kafka_topic;
-        config.disable_kafka = disable_kafka;
-        config.disable_mqtt = disable_mqtt;
-        config.disable_tcp = disable_tcp;
-        config.disable_logger = disable_logger;
-        config.enable_rt = enable_rt;
-        config.quiet_mode = quiet_mode;
-        config.benchmark_mode = benchmark_mode;
-        config.enable_disruptor = enable_disruptor;
-#ifdef USE_XDP
-        config.use_xdp = use_xdp;
-        config.xdp_interface = xdp_interface;
-        config.xdp_queue_id = xdp_queue_id;
-        config.enable_xdp_debug = enable_xdp_debug;
-#endif
+        // Load configuration from JSON file
+        OrderGateway::Config config = load_config(config_file);
 
         // Create and start gateway
         g_gateway = std::make_unique<OrderGateway>(config);
         g_gateway->start();
 
-        std::cout << "Gateway running. Press Ctrl+C to stop." << std::endl;
-        std::cout << std::endl;
+        spdlog::info("Gateway running. Press Ctrl+C to stop.");
+        spdlog::info("");
 
         // Wait for gateway to stop
         g_gateway->wait();
 
-        std::cout << std::endl;
-        std::cout << "Gateway stopped." << std::endl;
+        spdlog::info("");
+        spdlog::info("Gateway stopped.");
     }
     catch (const std::exception &e)
     {
-        std::cerr << "Error: " << e.what() << std::endl;
+        spdlog::error("Error: {}", e.what());
         return 1;
     }
 

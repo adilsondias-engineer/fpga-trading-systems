@@ -4,7 +4,7 @@ Listens for UDP packets from FPGA and parses them into BBOData
 */
 
 #include "udp_listener.h"
-#include <iostream>
+#include <spdlog/spdlog.h>
 #include <chrono>
 
 namespace gateway {

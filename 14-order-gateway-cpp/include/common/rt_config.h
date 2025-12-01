@@ -105,16 +105,19 @@ public:
  */
 struct ThreadConfig {
     // Priority levels (SCHED_FIFO range: 1-99, higher = more priority)
-    static constexpr int UDP_LISTENER_PRIORITY = 80;    // Highest - critical path
+    static constexpr int BINANCE_LISTENER_PRIORITY = 80; // Highest - critical path
+    static constexpr int UDP_XDP_LISTENER_PRIORITY = 80;    // Highest - critical path
     static constexpr int TCP_SERVER_PRIORITY = 70;      // High - TCP distribution
     static constexpr int MQTT_PUBLISHER_PRIORITY = 60;  // Medium - MQTT distribution
     static constexpr int KAFKA_PRODUCER_PRIORITY = 50;  // Medium - Kafka distribution
+    
 
-    // CPU core assignments (isolated cores: 2-5)
-    static constexpr int UDP_LISTENER_CPU = 2;          // Core 2 - UDP receive + parse
+    // CPU core assignments (isolated cores: 2-6)
+    static constexpr int UDP_XDP_LISTENER_CPU = 2;          // Core 2 - UDP/XDP receive + parse
     static constexpr int TCP_SERVER_CPU = 3;            // Core 3 - TCP distribution
     static constexpr int MQTT_PUBLISHER_CPU = 4;        // Core 4 - MQTT distribution
     static constexpr int KAFKA_PRODUCER_CPU = 5;        // Core 5 - Kafka distribution
+    static constexpr int BINANCE_LISTENER_CPU = 6;      // Core 6 - Binance WebSocket
 };
 
 } // namespace gateway

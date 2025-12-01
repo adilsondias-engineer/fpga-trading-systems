@@ -1,11 +1,11 @@
 #include "order_gateway.h"
 #include "common/rt_config.h"
 #include <spdlog/spdlog.h>
-#include <iostream>
 #include <chrono>
 #include <thread>
 #include <iomanip>
 #include <cmath>
+#include <sstream>
 
 namespace gateway
 {
@@ -18,9 +18,9 @@ namespace gateway
             try {
                 ring_buffer_ = disruptor::SharedMemoryManager<
                     disruptor::BboRingBuffer>::create("gateway");
-                std::cout << "[Disruptor] Shared memory ring buffer created" << std::endl;
+                spdlog::info("[Disruptor] Shared memory ring buffer created");
             } catch (const std::exception& e) {
-                std::cerr << "[Disruptor] Failed to create ring buffer: " << e.what() << std::endl;
+                spdlog::error("[Disruptor] Failed to create ring buffer: {}", e.what());
                 config_.enable_disruptor = false;
             }
         }
@@ -28,30 +28,41 @@ namespace gateway
         // Initialize components
         try
         {
-            // Create listener (XDP or UDP based on config)
+            // Create FPGA listener (XDP or UDP) if enabled
+            if (config_.enable_fpga) {
 #ifdef USE_XDP
-            if (config_.use_xdp) {
-                try {
-                    if (config_.enable_xdp_debug) {
-                        std::cout << "[XDP] Creating XDP listener on interface: " << config_.xdp_interface << std::endl;
+                if (config_.use_xdp) {
+                    try {
+                        if (config_.enable_xdp_debug) {
+                            spdlog::debug("[XDP] Creating XDP listener on interface: {}", config_.xdp_interface);
+                        }
+                        xdp_listener_ = std::make_unique<XDPListener>(config_.xdp_interface, config_.udp_port, config_.xdp_queue_id, config_.enable_xdp_debug);
+                        // Set perf monitor immediately after creation (before any auto-start in read_bbo)
+                        xdp_listener_->setPerfMonitor(&parse_latency_);
+                        if (config_.enable_xdp_debug) {
+                            spdlog::debug("[XDP] XDP listener created (interface: {}, port: {})", config_.xdp_interface, config_.udp_port);
+                        }
+                    } catch (const std::exception& e) {
+                        spdlog::warn("[XDP] Failed to create XDP listener: {}, falling back to UDP", e.what());
+                        config_.use_xdp = false;
                     }
-                    xdp_listener_ = std::make_unique<XDPListener>(config_.xdp_interface, config_.udp_port, config_.xdp_queue_id, config_.enable_xdp_debug);
-                    // Set perf monitor immediately after creation (before any auto-start in read_bbo)
-                    xdp_listener_->setPerfMonitor(&parse_latency_);
-                    if (config_.enable_xdp_debug) {
-                        std::cout << "[XDP] XDP listener created (interface: " << config_.xdp_interface << ", port: " << config_.udp_port << ")" << std::endl;
-                    }
-                } catch (const std::exception& e) {
-                    std::cout << "[XDP] Failed to create XDP listener: " << e.what() << ", falling back to UDP" << std::endl;
-                    config_.use_xdp = false;
                 }
-            }
 #endif
 
-            if (!config_.use_xdp) {
-                udp_listener_ = std::make_unique<UDPListener>(config_.udp_ip, config_.udp_port);
-                // Set perf monitor for UDP listener
-                udp_listener_->setPerfMonitor(&parse_latency_);
+                if (!config_.use_xdp) {
+                    udp_listener_ = std::make_unique<UDPListener>(config_.udp_ip, config_.udp_port);
+                    // Set perf monitor for UDP listener
+                    udp_listener_->setPerfMonitor(&parse_latency_);
+                }
+            }
+
+            // Create Binance WebSocket client if enabled
+            if (config_.enable_binance && !config_.binance_symbols.empty()) {
+                binance_client_ = std::make_unique<BinanceWSClient>(
+                    config_.binance_symbols,
+                    config_.binance_stream_type);
+                // Set perf monitor for Binance client
+                binance_client_->setPerfMonitor(&binance_parse_latency_);
             }
             
             tcp_server_ = std::make_unique<TCPServer>(config_.tcp_port);
@@ -89,7 +100,7 @@ namespace gateway
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Failed to initialize OrderGateway: " << e.what() << std::endl;
+            spdlog::error("Failed to initialize OrderGateway: {}", e.what());
             throw;
         }
     }
@@ -118,42 +129,59 @@ namespace gateway
         // Verify RT capabilities if enabled
         if (config_.enable_rt)
         {
-            std::cout << "[RT] Real-time optimizations enabled" << std::endl;
+            spdlog::info("[RT] Real-time optimizations enabled");
             if (!RTConfig::verifyRTCapabilities())
             {
-                std::cerr << "[RT] Warning: RT capabilities verification failed" << std::endl;
+                spdlog::warn("[RT] RT capabilities verification failed");
             }
         }
 
-        // Start UDP/XDP listener and reading thread
+        // Start FPGA listener (UDP/XDP) if enabled
+        if (config_.enable_fpga) {
 #ifdef USE_XDP
-        if (config_.use_xdp && xdp_listener_ && !xdp_listener_->isRunning())
-        {
-            xdp_listener_->start();
-        }
-        else
-#endif
-        if (udp_listener_ && !udp_listener_->isRunning())
-        {
-
-            // Enable benchmark mode in UDPListener to skip queue operations
-            if (config_.benchmark_mode)
+            if (config_.use_xdp && xdp_listener_ && !xdp_listener_->isRunning())
             {
-                udp_listener_->setBenchmarkMode(true);
+                xdp_listener_->start();
             }
+            else
+#endif
+            if (udp_listener_ && !udp_listener_->isRunning())
+            {
+                // Enable benchmark mode in UDPListener to skip queue operations
+                if (config_.benchmark_mode)
+                {
+                    udp_listener_->setBenchmarkMode(true);
+                }
 
-            udp_listener_->start();
+                udp_listener_->start();
+            }
+        }
+
+        // Start Binance WebSocket client if enabled
+        if (config_.enable_binance && binance_client_)
+        {
+            binance_client_->start([this](const BBOData& bbo) {
+                this->onBinanceBBO(bbo);
+            });
         }
 
         // Benchmark mode: skip threads, process directly in UDP callback
         if (config_.benchmark_mode)
         {
-            std::cout << "[BENCHMARK] Single-threaded mode enabled (no queue overhead)" << std::endl;
+            spdlog::info("[BENCHMARK] Single-threaded mode enabled (no queue overhead)");
             // No threads needed - processing happens in UDP callback
         }
         else
         {
-            udp_thread_ = std::thread(&OrderGateway::udpThreadFunc, this);
+            // Start FPGA thread if enabled
+            if (config_.enable_fpga) {
+                udp_thread_ = std::thread(&OrderGateway::udpThreadFunc, this);
+            }
+
+            // Start Binance thread if enabled
+            if (config_.enable_binance && binance_client_) {
+                binance_thread_ = std::thread(&OrderGateway::binanceThreadFunc, this);
+            }
 
             // Start publishing thread
             publish_thread_ = std::thread(&OrderGateway::publishThreadFunc, this);
@@ -162,15 +190,40 @@ namespace gateway
         // Apply RT optimizations if enabled (only in normal mode, not benchmark)
         if (config_.enable_rt && !config_.benchmark_mode)
         {
-            std::cout << "[RT] Applying real-time optimizations..." << std::endl;
+            spdlog::info("[RT] Applying real-time optimizations...");
 
-            // UDP thread: highest priority, pinned to core 2
-            if (!RTConfig::applyRTOptimization(
-                    udp_thread_.native_handle(),
-                    ThreadConfig::UDP_LISTENER_PRIORITY,
-                    ThreadConfig::UDP_LISTENER_CPU))
-            {
-                std::cerr << "[RT] Warning: Failed to optimize UDP thread" << std::endl;
+            // FPGA thread (UDP/XDP): highest priority, pinned to core 2
+            // This thread handles both UDP and XDP listeners
+            if (config_.enable_fpga && udp_thread_.joinable()) {
+                std::string mode = config_.use_xdp ? "XDP" : "UDP";
+                if (!RTConfig::applyRTOptimization(
+                        udp_thread_.native_handle(),
+                        ThreadConfig::UDP_XDP_LISTENER_PRIORITY,
+                        ThreadConfig::UDP_XDP_LISTENER_CPU))
+                {
+                    spdlog::warn("[RT] Failed to optimize FPGA {} thread", mode);
+                }
+                else
+                {
+                    spdlog::info("[RT] FPGA {} thread optimized: priority {}, CPU core {}", 
+                                mode, ThreadConfig::UDP_XDP_LISTENER_PRIORITY, ThreadConfig::UDP_XDP_LISTENER_CPU);
+                }
+            }
+
+            // Binance thread: high priority, pinned to core 4
+            if (config_.enable_binance && binance_thread_.joinable()) {
+                if (!RTConfig::applyRTOptimization(
+                        binance_thread_.native_handle(),
+                        ThreadConfig::BINANCE_LISTENER_PRIORITY,
+                        ThreadConfig::BINANCE_LISTENER_CPU))  // Core 6 for Binance
+                {
+                    spdlog::warn("[RT] Failed to optimize Binance thread");
+                }
+                else
+                {
+                    spdlog::info("[RT] Binance thread optimized: priority {}, CPU core {}", 
+                                ThreadConfig::BINANCE_LISTENER_PRIORITY, ThreadConfig::BINANCE_LISTENER_CPU);
+                }
             }
 
             // Publish thread: high priority, pinned to core 3
@@ -179,30 +232,49 @@ namespace gateway
                     ThreadConfig::TCP_SERVER_PRIORITY,
                     ThreadConfig::TCP_SERVER_CPU))
             {
-                std::cerr << "[RT] Warning: Failed to optimize publish thread" << std::endl;
+                spdlog::warn("[RT] Failed to optimize publish thread");
             }
 
-            std::cout << "[RT] Real-time optimizations applied" << std::endl;
+            spdlog::info("[RT] Real-time optimizations applied");
         }
 
-        std::cout << "Order Gateway started" << std::endl;
-        std::cout << "  UDP IP: " << config_.udp_ip << " @ " << config_.udp_port << " port" << std::endl;
-        std::cout << "  TCP Port: " << config_.tcp_port << std::endl;
+        spdlog::info("Order Gateway started");
+        if (config_.enable_fpga) {
+            std::string mode = "UDP mode";
+#ifdef USE_XDP
+            if (config_.use_xdp) {
+                mode = "XDP mode";
+            }
+#endif
+            spdlog::info("  FPGA Feed: {} @ {} port ({})", config_.udp_ip, config_.udp_port, mode);
+        } else {
+            spdlog::info("  FPGA Feed: Disabled");
+        }
+        if (config_.enable_binance && binance_client_) {
+            std::ostringstream symbols_str;
+            for (size_t i = 0; i < config_.binance_symbols.size(); ++i) {
+                if (i > 0) symbols_str << ", ";
+                symbols_str << config_.binance_symbols[i];
+            }
+            spdlog::info("  Binance Feed: {} symbols ({})", config_.binance_symbols.size(), symbols_str.str());
+        } else {
+            spdlog::info("  Binance Feed: Disabled");
+        }
+        spdlog::info("  TCP Port: {}", config_.tcp_port);
         if (mqtt_)
         {
-            std::cout << "  MQTT Broker: " << config_.mqtt_broker_url << std::endl;
-            std::cout << "  MQTT Topic: " << config_.mqtt_topic << std::endl;
+            spdlog::info("  MQTT Broker: {}", config_.mqtt_broker_url);
+            spdlog::info("  MQTT Topic: {}", config_.mqtt_topic);
         }
         if (kafka_)
         {
-            std::cout << "  Kafka Broker: " << config_.kafka_broker_url << std::endl;
-            std::cout << "  Kafka Topic: " << config_.kafka_topic << std::endl;
+            spdlog::info("  Kafka Broker: {}", config_.kafka_broker_url);
+            spdlog::info("  Kafka Topic: {}", config_.kafka_topic);
         }
         if (csv_logger_)
         {
-            std::cout << "  CSV Log: " << config_.csv_file << std::endl;
+            spdlog::info("  CSV Log: {}", config_.csv_file);
         }
-        std::cout << std::endl;
     }
 
     void OrderGateway::stop()
@@ -213,13 +285,20 @@ namespace gateway
         }
 
         // Print performance statistics BEFORE joining threads
-        if (parse_latency_.count() > 0) {
+        if (config_.enable_fpga && parse_latency_.count() > 0) {
             std::string mode = config_.use_xdp ? "XDP" : "UDP";
-            parse_latency_.printSummary("Project 14 (" + mode + ")");
-            parse_latency_.saveToFile("project14_latency.csv");
+            parse_latency_.printSummary("Project 14 FPGA (" + mode + ")");
+            parse_latency_.saveToFile("project14_fpga_latency.csv");
+        }
+        
+        if (config_.enable_binance && binance_parse_latency_.count() > 0) {
+            binance_parse_latency_.printSummary("Project 14 Binance (WebSocket)");
+            binance_parse_latency_.saveToFile("project14_binance_latency.csv");
         }
 
-        std::cout << "\nStopping Order Gateway..." << std::endl;
+        spdlog::info("Stopping Order Gateway...");
+        
+        // Set running_ to false FIRST to prevent new messages from being queued
         running_ = false;
 
         if (!config_.benchmark_mode)
@@ -228,17 +307,25 @@ namespace gateway
             queue_cv_.notify_all();
         }
 
+        // Stop Binance client
+        if (binance_client_)
+        {
+            binance_client_->stop();
+            spdlog::info("Binance client stopped");
+        }
+
+        // Stop FPGA listeners
 #ifdef USE_XDP
         if (xdp_listener_)
         {
             xdp_listener_->stop();
-            std::cout << "XDP listener stopped" << std::endl;
+            spdlog::info("XDP listener stopped");
         }
 #endif
         if (udp_listener_)
         {
             udp_listener_->stop();
-            std::cout << "UDP listener stopped" << std::endl;
+            spdlog::info("UDP listener stopped");
         }
 
         if (!config_.benchmark_mode)
@@ -247,6 +334,11 @@ namespace gateway
             if (udp_thread_.joinable())
             {
                 udp_thread_.join();
+            }
+
+            if (binance_thread_.joinable())
+            {
+                binance_thread_.join();
             }
 
             if (publish_thread_.joinable())
@@ -259,17 +351,17 @@ namespace gateway
         if (mqtt_)
         {
             mqtt_->disconnect();
-            std::cout << "MQTT disconnected" << std::endl;
+            spdlog::info("MQTT disconnected");
         }
 
         if (kafka_)
         {
             kafka_->flush();
-            std::cout << "Kafka flushed" << std::endl;
+            spdlog::info("Kafka flushed");
         }
 
         stopped_ = true;
-        std::cout << "Order Gateway stopped" << std::endl;
+        spdlog::info("Order Gateway stopped");
     }
 
     bool OrderGateway::isRunning() const
@@ -300,7 +392,7 @@ namespace gateway
 
     void OrderGateway::udpThreadFunc()
     {
-        std::cout << "UDP/XDP thread started" << std::endl;
+        spdlog::info("FPGA UDP/XDP thread started");
 
         while (running_)
         {
@@ -335,21 +427,31 @@ namespace gateway
                     }
                     else
                     {
-                        // Normal mode: add to queue
-                        std::unique_lock<std::mutex> lock(queue_mutex_);
-                        if (bbo_queue_.size() >= MAX_QUEUE_SIZE)
+                        // Normal mode: add to queue (only if still running)
+                        if (running_)
                         {
-                            bbo_queue_.pop(); // Drop oldest
+                            std::unique_lock<std::mutex> lock(queue_mutex_);
+                            
+                            // Double-check after acquiring lock
+                            if (!running_)
+                            {
+                                break; // Exit thread if shutting down
+                            }
+                            
+                            if (bbo_queue_.size() >= MAX_QUEUE_SIZE)
+                            {
+                                bbo_queue_.pop(); // Drop oldest
+                            }
+                            bbo_queue_.push(bbo);
+                            queue_cv_.notify_one();
                         }
-                        bbo_queue_.push(bbo);
-                        queue_cv_.notify_one();
                     }
                 }
             }
             catch (const std::exception &e)
             {
-                std::cerr << "[ERROR] UDP thread exception: " << e.what() << std::endl;
-                std::cerr << "[ERROR] Exception type: " << typeid(e).name() << std::endl;
+                std::string mode = config_.use_xdp ? "XDP" : "UDP";
+                spdlog::error("[ERROR] FPGA {} thread exception: {} (type: {})", mode, e.what(), typeid(e).name());
 
                 // Check if listener is still running
 #ifdef USE_XDP
@@ -357,7 +459,7 @@ namespace gateway
                 {
                     if (!xdp_listener_->isRunning())
                     {
-                        std::cerr << "[ERROR] XDP listener stopped, stopping gateway" << std::endl;
+                        spdlog::error("[ERROR] XDP listener stopped, stopping gateway");
                         running_ = false;
                         break;
                     }
@@ -366,7 +468,7 @@ namespace gateway
 #endif
                 if (udp_listener_ && !udp_listener_->isRunning())
                 {
-                    std::cerr << "[ERROR] UDP listener stopped, stopping gateway" << std::endl;
+                    spdlog::error("[ERROR] UDP listener stopped, stopping gateway");
                     running_ = false;
                     break;
                 }
@@ -377,7 +479,8 @@ namespace gateway
             catch (...)
             {
                 // Catch any other exceptions (not derived from std::exception)
-                std::cerr << "[ERROR] UDP thread: Unknown exception caught (not std::exception)" << std::endl;
+                std::string mode = config_.use_xdp ? "XDP" : "UDP";
+                spdlog::error("[ERROR] FPGA {} thread: Unknown exception caught (not std::exception)", mode);
                 
                 // Check if listener is still running
 #ifdef USE_XDP
@@ -385,7 +488,7 @@ namespace gateway
                 {
                     if (!xdp_listener_->isRunning())
                     {
-                        std::cerr << "[ERROR] XDP listener stopped after unknown exception, stopping gateway" << std::endl;
+                        spdlog::error("[ERROR] XDP listener stopped after unknown exception, stopping gateway");
                         running_ = false;
                         break;
                     }
@@ -394,7 +497,7 @@ namespace gateway
 #endif
                 if (udp_listener_ && !udp_listener_->isRunning())
                 {
-                    std::cerr << "[ERROR] UDP listener stopped after unknown exception, stopping gateway" << std::endl;
+                    spdlog::error("[ERROR] UDP listener stopped after unknown exception, stopping gateway");
                     running_ = false;
                     break;
                 }
@@ -404,12 +507,63 @@ namespace gateway
             }
         }
 
-        std::cout << "UDP thread stopped" << std::endl;
+        std::string mode = config_.use_xdp ? "XDP" : "UDP";
+        spdlog::info("FPGA {} thread stopped", mode);
+    }
+
+    void OrderGateway::binanceThreadFunc()
+    {
+        spdlog::info("Binance WebSocket thread started");
+
+        // Binance client handles its own connection loop
+        // This thread just waits for the client to stop
+        while (running_ && binance_client_ && binance_client_->isRunning())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        spdlog::info("Binance WebSocket thread stopped");
+    }
+
+    void OrderGateway::onBinanceBBO(const BBOData& bbo)
+    {
+        if (!bbo.valid)
+        {
+            return;
+        }
+
+        // Don't queue if gateway is shutting down
+        if (!running_)
+        {
+            return;
+        }
+
+        if (config_.benchmark_mode)
+        {
+            // Benchmark mode: just parse, don't queue
+            return;
+        }
+
+        // Add to queue (same as FPGA data)
+        std::unique_lock<std::mutex> lock(queue_mutex_);
+        
+        // Check again after acquiring lock (double-check pattern)
+        if (!running_)
+        {
+            return;
+        }
+        
+        if (bbo_queue_.size() >= MAX_QUEUE_SIZE)
+        {
+            bbo_queue_.pop(); // Drop oldest
+        }
+        bbo_queue_.push(bbo);
+        queue_cv_.notify_one();
     }
 
     void OrderGateway::publishThreadFunc()
     {
-        std::cout << "Publish thread started" << std::endl;
+        spdlog::info("Publish thread started");
 
         while (running_ || !bbo_queue_.empty())
         {
@@ -434,17 +588,21 @@ namespace gateway
 
             if (has_data)
             {
-                // Publish to all protocols
-                publishBBO(bbo);
-
-                // Log to CSV if enabled
-                if (csv_logger_)
+                // Publish to all protocols (only if still running)
+                if (running_)
                 {
-                    logBBO(bbo);
+                    publishBBO(bbo);
+
+                    // Log to CSV if enabled
+                    if (csv_logger_)
+                    {
+                        logBBO(bbo);
+                    }
                 }
 
-                // Console output (only if not in quiet mode)
-                if (!config_.quiet_mode)
+                // Console output (only if not in quiet mode and still running)
+                // Suppress output after shutdown to avoid confusing logs
+                if (running_ && !config_.quiet_mode)
                 {
                     // Suppress duplicate prints for the same symbol unless values changed
                     auto changed = [](const BBOData& prev, const BBOData& curr) {
@@ -465,27 +623,28 @@ namespace gateway
 
                     if (should_print)
                     {
-                        // Print to console (format prices to 4 decimals)
-                        std::cout << "[" << bbo.symbol << "] "
-                                  << "Bid: " << std::fixed << std::setprecision(4) << bbo.bid_price
-                                  << " (" << bbo.bid_shares << ") | ";
+                        // Log BBO update (format prices to 4 decimals)
+                        std::ostringstream oss;
+                        oss << "[" << bbo.symbol << "] "
+                            << "Bid: " << std::fixed << std::setprecision(4) << bbo.bid_price
+                            << " (" << bbo.bid_shares << ") | ";
                         if (bbo.ask_price > 0.0 && bbo.ask_shares > 0)
                         {
-                            std::cout << "Ask: " << std::fixed << std::setprecision(4) << bbo.ask_price
-                                      << " (" << bbo.ask_shares << ") | ";
+                            oss << "Ask: " << std::fixed << std::setprecision(4) << bbo.ask_price
+                                << " (" << bbo.ask_shares << ") | ";
                         }
                         else
                         {
-                            std::cout << "Ask: -" << " (-) | ";
+                            oss << "Ask: - (-) | ";
                         }
-                        std::cout << "Spread: " << std::fixed << std::setprecision(4) << bbo.spread
-                                  << std::endl;
+                        oss << "Spread: " << std::fixed << std::setprecision(4) << bbo.spread;
+                        spdlog::info(oss.str());
                     }
                 }
             }
         }
 
-        std::cout << "Publish thread stopped" << std::endl;
+        spdlog::info("Publish thread stopped");
     }
 
     void OrderGateway::publishBBO(const BBOData &bbo)
@@ -524,7 +683,7 @@ namespace gateway
         }
         catch (const std::exception &e)
         {
-            std::cerr << "TCP broadcast error: " << e.what() << std::endl;
+            spdlog::error("TCP broadcast error: {}", e.what());
         }
 
         // Publish to MQTT
@@ -536,7 +695,7 @@ namespace gateway
             }
             catch (const std::exception &e)
             {
-                std::cerr << "MQTT publish error: " << e.what() << std::endl;
+                spdlog::error("MQTT publish error: {}", e.what());
             }
         }
 
@@ -549,7 +708,7 @@ namespace gateway
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Kafka publish error: " << e.what() << std::endl;
+                spdlog::error("Kafka publish error: {}", e.what());
             }
         }
     }
@@ -564,7 +723,7 @@ namespace gateway
             }
             catch (const std::exception &e)
             {
-                std::cerr << "CSV log error: " << e.what() << std::endl;
+                spdlog::error("CSV log error: {}", e.what());
             }
         }
     }

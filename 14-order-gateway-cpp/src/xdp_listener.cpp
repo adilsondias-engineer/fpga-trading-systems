@@ -5,7 +5,7 @@ High-performance packet reception using AF_XDP (eXpress Data Path)
 
 #include "xdp_listener.h"
 #include "common/perf_monitor.h"
-#include <iostream>
+#include <spdlog/spdlog.h>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -47,9 +47,9 @@ static int get_ifindex(const std::string& iface) {
 XDPListener::XDPListener(const std::string& iface, int port, int queue_id, bool enable_debug)
     : iface_(iface), port_(port), queue_id_(queue_id), enable_debug_(enable_debug) {
     
-   // if (enable_debug_) {
-        std::cout << "[XDP] Initializing XDP listener on interface: " << iface << ", port: " << port << std::endl;
-   // }
+        if (enable_debug_) {
+            spdlog::debug("[XDP] Initializing XDP listener on interface: {}, port: {}", iface, port);
+        }
     
     // Get interface index
     ifindex_ = get_ifindex(iface);
@@ -57,9 +57,9 @@ XDPListener::XDPListener(const std::string& iface, int port, int queue_id, bool 
     // Initialize XDP
     try {
         init_xdp();
-      //  if (enable_debug_) {
-            std::cout << "[XDP] XDP listener initialized successfully" << std::endl;
-      //  }
+        if (enable_debug_) {
+            spdlog::debug("[XDP] XDP listener initialized successfully");
+        }
     } catch (const std::exception& e) {
         // Log error but don't print to stderr (will be caught by caller)
         // This matches Project 15's behavior where spdlog::error is used
@@ -93,16 +93,14 @@ XDPListener::~XDPListener() {
         // Try to delete the entry - this is critical for cleanup
         int ret = bpf_map_delete_elem(xsk_map_fd_, &key);
         if (ret == 0) {
-           // if (enable_debug_) {
-                std::cout << "[XDP] Successfully removed socket from XSK map (key=" << key << ")" << std::endl;
-           // }
+            if (enable_debug_) {
+                spdlog::debug("[XDP] Successfully removed socket from XSK map (key={})", key);
+            }
         } else {
             // Deletion failed - log but don't fail
             if (enable_debug_) {
-                std::cerr << "[XDP] WARNING: Failed to remove socket from XSK map (key=" << key 
-                          << "): " << strerror(errno) << std::endl;
-                std::cerr << "[XDP] This may cause bind failures on next run. "
-                          << "Try: sudo xdp-loader unload " << iface_ << std::endl;
+                spdlog::warn("[XDP] Failed to remove socket from XSK map (key={}): {}", key, strerror(errno));
+                spdlog::warn("[XDP] This may cause bind failures on next run. Try: sudo xdp-loader unload {}", iface_);
             }
         }
         
@@ -134,8 +132,8 @@ void XDPListener::init_xdp() {
     // Load XDP program (simplified - in production use libbpf)
     // Uses simplified approach requiring manual XDP program loading
     if (enable_debug_) {
-        std::cout << "[XDP] WARNING: XDP program must be loaded manually. See README_XDP.md for instructions" << std::endl;
-        std::cout << "[XDP] WARNING: For now, using fallback mode. Full XDP support requires libbpf/libxdp" << std::endl;
+        spdlog::warn("[XDP] XDP program must be loaded manually. See README_XDP.md for instructions");
+        spdlog::warn("[XDP] For now, using fallback mode. Full XDP support requires libbpf/libxdp");
     }
 }
 
@@ -220,10 +218,10 @@ void XDPListener::setup_xdp_socket() {
         // CRITICAL: Queue 0 handles ALL network traffic (including internet)
         // Using queue 0 can cause network connectivity loss if XDP interferes
         if (queue_id_ == 0 && num_queues > 1) {
-            std::cerr << "[XDP] WARNING: Using queue 0 on " << iface_ << " may cause network connectivity issues!" << std::endl;
-            std::cerr << "[XDP] Queue 0 handles ALL network traffic (including internet)." << std::endl;
-            std::cerr << "[XDP] Recommendation: Use a higher queue number (1-" << (num_queues - 1) << ") instead." << std::endl;
-            std::cerr << "[XDP] Example: --xdp-queue-id 1" << std::endl;
+            spdlog::warn("[XDP] Using queue 0 on {} may cause network connectivity issues!", iface_);
+            spdlog::warn("[XDP] Queue 0 handles ALL network traffic (including internet).");
+            spdlog::warn("[XDP] Recommendation: Use a higher queue number (1-{}) instead.", num_queues - 1);
+            spdlog::warn("[XDP] Example: --xdp-queue-id 1");
         }
         
         if (queue_id_ >= num_queues) {
@@ -243,41 +241,29 @@ void XDPListener::setup_xdp_socket() {
             }
             warning_msg += "\n  Continuing anyway - kernel will reject during bind if queue doesn't exist";
             
-            std::cerr << "[XDP] " << warning_msg << std::endl;
+            spdlog::warn("[XDP] {}", warning_msg);
         } else {
-           // if (enable_debug_) {
-                std::cout << "[XDP] Interface " << iface_ << " has " << num_queues 
-                          << " RX queue(s), using queue_id=" << queue_id_ << " (valid)" << std::endl;
+            if (enable_debug_) {
+                spdlog::debug("[XDP] Interface {} has {} RX queue(s), using queue_id={} (valid)", iface_, num_queues, queue_id_);
                 if (queue_id_ == 0) {
-                    std::cout << "[XDP] WARNING: Queue 0 may interfere with network connectivity!" << std::endl;
+                    spdlog::debug("[XDP] WARNING: Queue 0 may interfere with network connectivity!");
                 }
-           // }
+            }
         }
     } else {
         // Can't determine queue count - warn but continue
         if (queue_id_ > 0) {
-            std::cerr << "[XDP] WARNING: Could not determine queue count for " << iface_ 
-                      << ", using queue_id=" << queue_id_ << std::endl;
-            std::cerr << "[XDP] This may fail if queue doesn't exist. "
-                      << "Check with: ls /sys/class/net/" << iface_ << "/queues/" << std::endl;
+            spdlog::warn("[XDP] Could not determine queue count for {}, using queue_id={}", iface_, queue_id_);
+            spdlog::warn("[XDP] This may fail if queue doesn't exist. Check with: ls /sys/class/net/{}/queues/", iface_);
         } else if (queue_id_ == 0) {
-            std::cerr << "[XDP] WARNING: Using queue 0 without queue count verification!" << std::endl;
-            std::cerr << "[XDP] Queue 0 may handle ALL network traffic - this can cause connectivity loss!" << std::endl;
+            spdlog::warn("[XDP] Using queue 0 without queue count verification!");
+            spdlog::warn("[XDP] Queue 0 may handle ALL network traffic - this can cause connectivity loss!");
         }
     }
     
     // CRITICAL: Log the queue configuration for debugging
     if (enable_debug_) {
-        std::cout << "[XDP] Queue configuration: interface=" << iface_ 
-                  << ", queue_id=" << queue_id_ 
-                  << ", detected_queues=" << num_queues << std::endl;
-    }
-    
-    // CRITICAL: Log the queue configuration for debugging
-    if (enable_debug_) {
-        std::cout << "[XDP] Queue configuration: interface=" << iface_ 
-                  << ", queue_id=" << queue_id_ 
-                  << ", detected_queues=" << num_queues << std::endl;
+        spdlog::debug("[XDP] Queue configuration: interface={}, queue_id={}, detected_queues={}", iface_, queue_id_, num_queues);
     }
     
 #ifdef HAVE_LIBXDP
@@ -293,7 +279,7 @@ void XDPListener::setup_xdp_socket() {
     __u32 found_map_id = 0;
     
     if (enable_debug_) {
-        std::cout << "[XDP] Searching for xsks_map..." << std::endl;
+        spdlog::debug("[XDP] Searching for xsks_map...");
     }
 
     // Try to find the xsks_map by iterating through existing maps
@@ -313,33 +299,29 @@ void XDPListener::setup_xdp_socket() {
                     int test_value = -1;
                     int test_ret = bpf_map_lookup_elem(fd, &test_key, &test_value);
                     
-                   // if (enable_debug_) {
-                        std::cout << "[XDP] Found xsks_map candidate (ID: " << map_id 
-                                  << ", type: " << info.type << ", max_entries: " << info.max_entries 
-                                  << ", key_size: " << info.key_size << ", value_size: " << info.value_size << ")" << std::endl;
-                   // }
+                    if (enable_debug_) {
+                        spdlog::debug("[XDP] Found xsks_map candidate (ID: {}, type: {}, max_entries: {}, key_size: {}, value_size: {})", 
+                                     map_id, info.type, info.max_entries, info.key_size, info.value_size);
+                    }
                     
                     if (test_ret == 0) {
                         if (enable_debug_) {
-                            std::cout << "[XDP] Map contains: key=0 -> value=" << test_value << std::endl;
+                            spdlog::debug("[XDP] Map contains: key=0 -> value={}", test_value);
                         }
                         if (test_value > 0) {
                             if (enable_debug_) {
-                                std::cout << "[XDP] WARNING: Map already has entry (FD=" << test_value 
-                                          << "), will overwrite" << std::endl;
+                                spdlog::debug("[XDP] WARNING: Map already has entry (FD={}), will overwrite", test_value);
                             }
                         } else if (test_value == 0) {
-                            if (enable_debug_) {
-                                std::cout << "[XDP] WARNING: Map contains 0 (invalid/uninitialized)" << std::endl;
+                            if (enable_debug_) { spdlog::debug("[XDP] WARNING: Map contains 0 (invalid/uninitialized)");
                             }
                         }
                     } else {
                         if (enable_debug_) {
                             if (errno == 95) {
-                                std::cout << "[XDP] Map lookup not supported (EOPNOTSUPP) - this is normal for XSK maps" << std::endl;
+                                spdlog::debug("[XDP] Map lookup not supported (EOPNOTSUPP) - this is normal for XSK maps");
                             } else {
-                                std::cout << "[XDP] Map lookup failed: errno=" << errno 
-                                          << " (" << strerror(errno) << ")" << std::endl;
+                                spdlog::debug("[XDP] Map lookup failed: errno={} ({})", errno, strerror(errno));
                             }
                         }
                     }
@@ -357,14 +339,13 @@ void XDPListener::setup_xdp_socket() {
                         found_map_id = map_id;
                         found_map = true;
                         xsk_map_fd_ = fd;  // Store for cleanup
-                        //if (enable_debug_) {
-                            std::cout << "[XDP] Selected map ID " << map_id << " (newest)" << std::endl;
-                      //  }
+                        if (enable_debug_) {
+                            spdlog::debug("[XDP] Selected map ID {} (newest)", map_id);
+                        }
                     } else {
                         // Found an older map - ignore it
                         if (enable_debug_) {
-                            std::cout << "[XDP] Skipping older xsks_map (ID: " << map_id
-                                      << "), using newer ID: " << found_map_id << std::endl;
+                            spdlog::debug("[XDP] Skipping older xsks_map (ID: {}), using newer ID: {}", map_id, found_map_id);
                         }
                         close(fd);  // Close older map
                     }
@@ -386,8 +367,7 @@ void XDPListener::setup_xdp_socket() {
     // 2. Clean up our target queue_id
     // DO NOT delete other queue entries - they might be in use by other processes!
     // This must be done BEFORE creating the socket, as the kernel validates the socket FD
-   // if (enable_debug_) {
-        std::cout << "[XDP] Cleaning up stale XSK map entries..." << std::endl;
+   // if (enable_debug_) { spdlog::debug("[XDP] Cleaning up stale XSK map entries...");
     //}
     
     // CRITICAL: Always try to clean up queue 0 first
@@ -407,8 +387,7 @@ void XDPListener::setup_xdp_socket() {
             // Socket FD is invalid (closed) - entry is stale
             is_stale = true;
             if (enable_debug_) {
-                std::cout << "[XDP] Found stale entry at queue 0 (socket_fd=" << queue0_value 
-                          << " is closed/invalid)" << std::endl;
+                spdlog::debug("[XDP] Found stale entry at queue 0 (socket_fd={} is closed/invalid)", queue0_value);
             }
         } else {
             // Socket might still be valid - be more careful
@@ -426,15 +405,14 @@ void XDPListener::setup_xdp_socket() {
                 if (bpf_map_delete_elem(map_fd, &queue0_key) == 0) {
                     queue0_cleaned++;
                     //if (enable_debug_) {
-                        std::cout << "[XDP] Removed stale queue 0 entry (attempt " << (retry + 1) << ")" << std::endl;
+                        spdlog::debug("[XDP] Removed stale queue 0 entry (attempt {})", retry + 1);
                     //}
                     usleep(10000);  // 10ms delay
                     // Verify it's actually gone
                     int verify_value = 0;
                     if (bpf_map_lookup_elem(map_fd, &queue0_key, &verify_value) == 0 && verify_value > 0) {
                         // Still there - keep trying
-                        if (enable_debug_) {
-                            std::cout << "[XDP] Queue 0 entry still exists after delete, retrying..." << std::endl;
+                        if (enable_debug_) { spdlog::debug("[XDP] Queue 0 entry still exists after delete, retrying...");
                         }
                         continue;
                     } else {
@@ -450,8 +428,7 @@ void XDPListener::setup_xdp_socket() {
             }
         }
     } else {
-       // if (enable_debug_) {
-            std::cout << "[XDP] No entry found at queue 0 (this is OK)" << std::endl;
+       // if (enable_debug_) { spdlog::debug("[XDP] No entry found at queue 0 (this is OK)");
        // }
     }
     
@@ -518,8 +495,7 @@ void XDPListener::setup_xdp_socket() {
                             continue;
                         } else {
                             // Successfully deleted
-                           // if (enable_debug_) {
-                                std::cout << "[XDP] Successfully cleaned queue " << check_key << std::endl;
+                           // if (enable_debug_) { spdlog::debug("[XDP] Successfully cleaned queue ", check_key );
                            // }
                             break;
                         }
@@ -603,7 +579,7 @@ void XDPListener::setup_xdp_socket() {
     }
 
     if (enable_debug_) {
-        std::cout << "[XDP] UMEM registered (" << umem_size_ << " bytes, " << NUM_FRAMES << " frames)" << std::endl;
+        spdlog::debug("[XDP] UMEM registered ({} bytes, {} frames)", umem_size_ , NUM_FRAMES );
     }
 
     // Setup Fill and Completion rings
@@ -647,7 +623,7 @@ void XDPListener::setup_xdp_socket() {
     }
 
     if (enable_debug_) {
-        std::cout << "[XDP] Rings configured (RX/TX/Fill/Comp: " << rx_size << " entries each)" << std::endl;
+        spdlog::debug("[XDP] Rings configured (RX/TX/Fill/Comp: {} entries each)", rx_size );
     }
 
     // Now bind the socket FIRST (before populating XSK map)
@@ -664,8 +640,7 @@ void XDPListener::setup_xdp_socket() {
         // If bind fails with EINVAL, it might be because XSK map still has a stale entry
         // Try to clean it up and retry once
         if (err == EINVAL) {
-            if (enable_debug_) {
-                std::cout << "[XDP] Bind failed with EINVAL, attempting to clean up XSK map and retry..." << std::endl;
+            if (enable_debug_) { spdlog::debug("[XDP] Bind failed with EINVAL, attempting to clean up XSK map and retry...");
             }
             // Force delete the entry for our queue_id (ignore errors - entry may not exist)
             int cleanup_key = queue_id_;
@@ -691,8 +666,7 @@ void XDPListener::setup_xdp_socket() {
             
             // Retry bind
             if (bind(xdp_socket_fd_, (struct sockaddr*)&sxdp, sizeof(sxdp)) == 0) {
-                if (enable_debug_) {
-                    std::cout << "[XDP] Bind succeeded after cleanup!" << std::endl;
+                if (enable_debug_) { spdlog::debug("[XDP] Bind succeeded after cleanup!");
                 }
                 // Success - continue
             } else {
@@ -766,8 +740,7 @@ void XDPListener::setup_xdp_socket() {
     }
     free_frames_count_ = NUM_FRAMES;
 
-    if (enable_debug_) {
-        std::cout << "[XDP] Frame allocator initialized" << std::endl;
+    if (enable_debug_) { spdlog::debug("[XDP] Frame allocator initialized");
     }
     
     // CRITICAL: Fill ring must be populated BEFORE adding socket to XSK map
@@ -843,13 +816,11 @@ void XDPListener::setup_xdp_socket() {
     
     // If BPF_ANY fails, try BPF_NOEXIST (create only) or BPF_EXIST (update only)
     if (ret < 0 && errno == EINVAL) {
-        if (enable_debug_) {
-            std::cout << "[XDP] BPF_ANY failed with EINVAL, trying BPF_NOEXIST" << std::endl;
+        if (enable_debug_) { spdlog::debug("[XDP] BPF_ANY failed with EINVAL, trying BPF_NOEXIST");
         }
         ret = bpf_map_update_elem(map_fd, &xsk_map_key, &xsk_map_value, BPF_NOEXIST);
         if (ret < 0 && errno == EEXIST) {
-            if (enable_debug_) {
-                std::cout << "[XDP] Entry exists, trying BPF_EXIST to update" << std::endl;
+            if (enable_debug_) { spdlog::debug("[XDP] Entry exists, trying BPF_EXIST to update");
             }
             ret = bpf_map_update_elem(map_fd, &xsk_map_key, &xsk_map_value, BPF_EXIST);
         }
@@ -872,8 +843,7 @@ void XDPListener::setup_xdp_socket() {
     
     // CRITICAL: Updates ALL xsks_map instances found
     // With xdp-loader, there might be multiple maps and the correct one must be updated
-    if (enable_debug_) {
-        std::cout << "[XDP] Attempting to update ALL xsks_map instances..." << std::endl;
+    if (enable_debug_) { spdlog::debug("[XDP] Attempting to update ALL xsks_map instances...");
     }
     __u32 all_map_id = 0;
     int updated_count = 0;
@@ -927,8 +897,7 @@ void XDPListener::setup_xdp_socket() {
             }
             if (test_value == xsk_map_value) {
                 verified = true;
-                if (enable_debug_) {
-                    std::cout << "[XDP] XSK map verified successfully!" << std::endl;
+                if (enable_debug_) { spdlog::debug("[XDP] XSK map verified successfully!");
                 }
                 break;
             } else {
@@ -968,8 +937,7 @@ void XDPListener::setup_xdp_socket() {
     }
     
     // Debug: Show initial ring state
-    if (enable_debug_) {
-        std::cout << "[XDP] Initial ring state:" << std::endl;
+    if (enable_debug_) { spdlog::debug("[XDP] Initial ring state:");
         std::cout << "  RX: producer=" << *rx_ring_.producer << " consumer=" << *rx_ring_.consumer << std::endl;
         std::cout << "  Fill: producer=" << *fill_ring_.producer << " consumer=" << *fill_ring_.consumer << std::endl;
         std::cout << "  Completion: producer=" << *completion_ring_.producer << " consumer=" << *completion_ring_.consumer << std::endl;
@@ -988,8 +956,7 @@ void XDPListener::setup_xdp_socket() {
     // map_fd is stored in xsk_map_fd_ for cleanup
 #else
     // Fallback to raw syscalls (will likely fail without XSK map population)
-    if (enable_debug_) {
-        std::cout << "[XDP] WARNING: libxdp not available, using raw syscalls (bind may fail)" << std::endl;
+    if (enable_debug_) { spdlog::debug("[XDP] WARNING: libxdp not available, using raw syscalls (bind may fail)");
     }
     
     // Create AF_XDP socket
@@ -1029,8 +996,7 @@ void XDPListener::start() {
     if (!running_) {
         running_ = true;
         fill_fill_ring();
-        //if (enable_debug_) {
-            std::cout << "[XDP] XDP listener started" << std::endl;
+        //if (enable_debug_) { spdlog::debug("[XDP] XDP listener started");
             std::cout << "[XDP] Ring status:" << std::endl;
             std::cout << "  RX: producer=" << *rx_ring_.producer << " consumer=" << *rx_ring_.consumer << std::endl;
             std::cout << "  Fill: producer=" << *fill_ring_.producer << " consumer=" << *fill_ring_.consumer << std::endl;
@@ -1043,8 +1009,7 @@ void XDPListener::start() {
 void XDPListener::stop() {
     if (running_) {
         running_ = false;
-       // if (enable_debug_) {
-            std::cout << "[XDP] XDP listener stopped" << std::endl;
+       // if (enable_debug_) { spdlog::debug("[XDP] XDP listener stopped");
       //  }
     }
 }
@@ -1089,13 +1054,13 @@ BBOData XDPListener::read_bbo() {
         } catch (const std::exception& e) {
             // Log parsing errors but continue processing
             if (enable_debug_) {
-                std::cerr << "[XDP] ERROR in read_bbo: " << e.what() << std::endl;
+                spdlog::error("[XDP] ERROR in read_bbo: {}", e.what());
             }
             // Continue to next packet instead of crashing
         } catch (...) {
             // Catch any other exceptions
             if (enable_debug_) {
-                std::cerr << "[XDP] ERROR: Unknown exception in read_bbo" << std::endl;
+                spdlog::error("[XDP] ERROR: Unknown exception in read_bbo");
             }
             // Continue to next packet
         }
@@ -1717,4 +1682,5 @@ void XDPListener::fill_fill_ring() {
 }
 
 } // namespace gateway
+
 

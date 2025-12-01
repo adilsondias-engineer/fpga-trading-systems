@@ -1,5 +1,5 @@
 #include "kafka_producer.h"
-#include <iostream>
+#include <spdlog/spdlog.h>
 #include <sstream>
 
 KafkaProducer::KafkaProducer(const std::string &broker_url, const std::string &client_id)
@@ -50,7 +50,7 @@ KafkaProducer::~KafkaProducer()
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Error closing Kafka producer: " << e.what() << std::endl;
+            spdlog::error("Error closing Kafka producer: {}", e.what());
         }
     }
     // Producer will be automatically destroyed when unique_ptr goes out of scope
@@ -116,7 +116,7 @@ void KafkaProducer::flush()
     RdKafka::ErrorCode resp = producer_->flush(10000);
     if (resp != RdKafka::ERR_NO_ERROR)
     {
-        std::cerr << "Warning: Kafka flush returned: " << RdKafka::err2str(resp) << std::endl;
+        spdlog::warn("Kafka flush returned: {}", RdKafka::err2str(resp));
     }
 }
 

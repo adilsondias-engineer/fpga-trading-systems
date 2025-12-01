@@ -8,17 +8,22 @@
 
 ## Overview
 
-The C++ Order Gateway is the **middleware layer** of the FPGA trading system, acting as a bridge between the FPGA hardware and application clients. It reads BBO (Best Bid/Offer) data from the FPGA via **AF_XDP kernel bypass** and distributes it using **LMAX Disruptor lock-free IPC** for ultra-low-latency communication.
+The C++ Order Gateway is the **middleware layer** of the FPGA trading system, acting as a bridge between multiple data sources and application clients. It reads BBO (Best Bid/Offer) data from **FPGA hardware via AF_XDP kernel bypass** and **Binance WebSocket streams**, then distributes it using **LMAX Disruptor lock-free IPC** for ultra-low-latency communication or multi-protocol distribution for client applications.
 
 **Primary Data Flow (Ultra-Low-Latency):**
 ```
 FPGA Order Book (UDP) → XDP Kernel Bypass (0.10 μs) → Disruptor Shared Memory → Market Maker FSM (4.13 μs end-to-end)
 ```
 
-**Legacy Data Flow (Multi-Protocol Distribution):**
+**Multi-Protocol Distribution:**
 ```
 FPGA Order Book (UDP) → C++ Gateway → TCP/MQTT/Kafka → Applications
+Binance WebSocket (wss://) → C++ Gateway → TCP/MQTT/Kafka → Applications
 ```
+
+**Data Sources:**
+- **FPGA Feed:** Binary BBO packets via UDP/XDP (ultra-low latency, sub-microsecond parsing)
+- **Binance Feed:** JSON WebSocket streams (real-time cryptocurrency market data, ~5 μs parsing)
 
 ---
 
@@ -60,32 +65,40 @@ FPGA Order Book (UDP) → C++ Gateway → TCP/MQTT/Kafka → Applications
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Legacy Architecture (Multi-Protocol Distribution):**
+**Multi-Protocol Distribution Architecture:**
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                   C++ Order Gateway                       │
-│                                                           │
+│                   C++ Order Gateway                      │
+│                                                          │
 │  ┌────────────────┐     ┌──────────────────────────┐     │
-│  │  UDP Listener  │────→│     BBO Parser          │     │
+│  │  UDP Listener  │────→│     BBO Parser           │     │
 │  │  (Async I/O)   │     │  (Binary Protocol)       │     │
 │  │  Port 5000     │     │                          │     │
 │  └────────────────┘     └──────────┬───────────────┘     │
-│                                    │                      │
-│                                    ↓                      │
-│                         ┌──────────────────┐              │
-│                         │  Thread-Safe     │              │
-│                         │  BBO Queue       │              │
-│                         └─────────┬────────┘              │
-│                                   │                       │
-│          ┌────────────────────────┼────────────────┐      │
-│          ↓                        ↓                ↓      │
-│  ┌──────────────┐      ┌──────────────┐  ┌──────────────┐│
-│  │ TCP Server   │      │ MQTT Publisher│  │Kafka Producer││
-│  │ localhost    │      │ Mosquitto     │  │              ││
-│  │ port 9999    │      │ 192.168.0.2   │  │ 192.168.0.203││
-│  │              │      │ :1883         │  │ :9092        ││
-│  │ JSON output  │      │ v3.1.1        │  │ For future   ││
-│  └──────────────┘      └──────────────┘  └──────────────┘│
+│                                    │                     │
+│  ┌────────────────┐     ┌──────────┴───────────────┐     │
+│  │ Binance WS     │────→│   Binance Parser         │     │
+│  │ Client         │     │  (JSON Protocol)         │     │
+│  │ (Boost.Beast)  │     │                          │     │
+│  │ wss://stream   │     └──────────┬───────────────┘     │
+│  │ .binance.com   │                │                     │
+│  └────────────────┘                │                     │
+│                                    ↓                     │
+│                         ┌──────────────────┐             │
+│                         │  Thread-Safe     │             │
+│                         │  BBO Queue       │             │
+│                         │  (Unified)       │             │
+│                         └─────────┬────────┘             │
+│                                   │                      │
+│          ┌────────────────────────┼────────────────┐     │
+│          ↓                        ↓                ↓     │
+│  ┌──────────────┐      ┌───────────────┐ ┌──────────────┐│
+│  │ TCP Server   │      │ MQTT Publisher│ │Kafka Producer││
+│  │ localhost    │      │ Mosquitto     │ │              ││
+│  │ port 9999    │      │ 192.168.0.2   │ │ 192.168.0.203││
+│  │              │      │ :1883         │ │ :9092        ││
+│  │ JSON output  │      │ v3.1.1        │ │ For future   ││
+│  └──────────────┘      └───────────────┘ └──────────────┘│
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -95,17 +108,51 @@ FPGA Order Book (UDP) → C++ Gateway → TCP/MQTT/Kafka → Applications
 |----------|----------|---------|--------|
 | **TCP** | Java Desktop (low-latency trading terminal) | JavaFX app | ✅ Active |
 | **MQTT** | ESP32 IoT + Mobile App (lightweight, mobile-friendly) | ESP32 TFT + .NET MAUI | ✅ Active |
-| **Kafka** | Future analytics, data persistence, replay | None yet | 📝 Reserved |
+| **Kafka** | Future analytics, data persistence, replay | None yet | Reserved |
 
 ---
 
 ## Features
 
-### 1. UDP Interface (Standard and XDP Kernel Bypass)
+### 1. Data Sources
+
+#### FPGA Feed (UDP/XDP)
 - **Async UDP socket listening** using Boost.Asio (standard mode)
 - **AF_XDP kernel bypass** for ultra-low latency (optional, requires Linux + XDP program)
 - **Port:** 5000 (configurable)
 - **Format:** Binary BBO data packets from FPGA (256-byte packets)
+- **Enable/Disable:** `--disable-fpga` flag to disable FPGA feed for testing
+
+#### Binance WebSocket Feed
+- **WebSocket client** connecting to Binance Spot API streams
+- **Endpoint:** `wss://stream.binance.com:9443/stream`
+- **Stream Type:** `bookTicker` (best bid/ask updates in real-time)
+- **Format:** JSON messages converted to BBOData structure
+- **Features:**
+  - Automatic reconnection with exponential backoff
+  - Ping/pong keepalive (every 20 seconds)
+  - Combined stream support (multiple symbols in single connection)
+  - Thread-safe integration with existing BBO queue
+  - Asynchronous I/O using Boost.Beast for non-blocking operations
+  - SSL/TLS encrypted connection
+  - Latency measurement using PerfMonitor (same as FPGA feed)
+- **Enable:** Configure in `config.json`:
+  ```json
+  {
+    "fpga": { "enable": false },
+    "binance": {
+      "enable": true,
+      "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+      "stream_type": "bookTicker"
+    }
+  }
+  ```
+- **Use Cases:**
+  - Testing Binance feed in isolation: Set `fpga.enable: false` and `binance.enable: true`
+  - Running both feeds in parallel: Enable both FPGA and Binance feeds
+  - Multi-exchange market data aggregation
+  - Real-time cryptocurrency market data for trading systems
+- **Performance:** See Binance WebSocket Performance section below
 
 **Standard UDP Performance (Validated):**
 - **Average:** 0.20 μs, **P50:** 0.19 μs, **P99:** 0.38 μs
@@ -354,68 +401,174 @@ sudo ./build/order_gateway 0.0.0.0 5000 --use-xdp --xdp-interface eno2 --xdp-que
 
 ## Usage
 
-### Basic Usage
+### Configuration File
 
+Project 14 uses a JSON configuration file (similar to Project 15) instead of command-line arguments. The default configuration file is `config.json` in the same directory as the executable.
+
+**Basic Usage:**
 ```bash
-# Windows
-order_gateway.exe 0.0.0.0 5000
+# Use default config.json
+./order_gateway
 
-# Linux
-./order_gateway 0.0.0.0 5000
+# Use custom config file
+./order_gateway /path/to/config.json
 ```
 
-### With Options
+### Configuration File Format
 
-```bash
-# Custom UDP IP and port
-order_gateway.exe 192.168.1.100 5000
+Example `config.json`:
 
-# Custom TCP port
-order_gateway.exe 0.0.0.0 5000 --tcp-port 9999
-
-# Enable CSV logging
-order_gateway.exe 0.0.0.0 5000 --csv-file bbo_log.csv
-
-# Custom MQTT broker
-order_gateway.exe 0.0.0.0 5000 --mqtt-broker mqtt://192.168.0.2:1883 --mqtt-topic bbo_messages
-
-# Custom Kafka broker
-order_gateway.exe 0.0.0.0 5000 --kafka-broker 192.168.0.203:9092 --kafka-topic bbo_messages
-
-# All options combined
-order_gateway.exe 0.0.0.0 5000 --tcp-port 9999 --csv-file bbo_log.csv --mqtt-broker mqtt://192.168.0.2:1883
-
-# XDP mode (kernel bypass)
-./order_gateway 0.0.0.0 5000 --use-xdp --xdp-interface eno2 --xdp-queue-id 3
-
-# XDP mode with debug logging
-./order_gateway 0.0.0.0 5000 --use-xdp --xdp-interface eno2 --xdp-queue-id 3 --enable-xdp-debug
+```json
+{
+  "log_level": "info",
+  
+  "fpga": {
+    "enable": true,
+    "udp_ip": "0.0.0.0",
+    "udp_port": 5000,
+    "use_xdp": false,
+    "xdp_interface": "eno2",
+    "xdp_queue_id": 0,
+    "enable_xdp_debug": false
+  },
+  
+  "binance": {
+    "enable": false,
+    "symbols": ["BTCUSDT", "ETHUSDT"],
+    "stream_type": "bookTicker"
+  },
+  
+  "tcp": {
+    "enable": true,
+    "port": 9999
+  },
+  
+  "mqtt": {
+    "enable": true,
+    "broker_url": "mqtt://192.168.0.2:1883",
+    "client_id": "order_gateway",
+    "username": "trading",
+    "password": "trading123",
+    "topic": "bbo_messages"
+  },
+  
+  "kafka": {
+    "enable": true,
+    "broker_url": "192.168.0.203:9092",
+    "client_id": "order_gateway",
+    "topic": "bbo_messages"
+  },
+  
+  "csv_logger": {
+    "enable": false,
+    "file": ""
+  },
+  
+  "disruptor": {
+    "enable": false,
+    "shm_name": "gateway"
+  },
+  
+  "performance": {
+    "enable_rt": false,
+    "quiet_mode": false,
+    "benchmark_mode": false
+  }
+}
 ```
 
-### Command-Line Options
+### Configuration Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `udp_ip` | UDP IP address to bind (0.0.0.0 for all) | **Required** |
-| `udp_port` | UDP port to listen on | **Required** |
-| `--tcp-port` | TCP server port | 9999 |
-| `--csv-file` | CSV log file path | None (disabled) |
-| `--mqtt-broker` | MQTT broker URL | mqtt://192.168.0.2:1883 |
-| `--mqtt-topic` | MQTT topic name | bbo_messages |
-| `--kafka-broker` | Kafka broker URL | 192.168.0.203:9092 |
-| `--kafka-topic` | Kafka topic name | bbo_messages |
-| `--disable-tcp` | Disable TCP server | false |
-| `--disable-mqtt` | Disable MQTT publisher | false |
-| `--disable-kafka` | Disable Kafka producer | false |
-| `--disable-logger` | Disable CSV logger | false |
-| `--enable-rt` | Enable RT scheduling + CPU pinning | false |
-| `--use-xdp` | Use AF_XDP for kernel bypass (requires XDP program loaded) | false |
-| `--xdp-interface` | Network interface for XDP (e.g., eno2) | eno2 |
-| `--xdp-queue-id` | XDP queue ID (must match RX queue packets arrive on) | 0 |
-| `--enable-xdp-debug` | Enable XDP debug logging (verbose ring status, map operations) | false |
-| `--enable-disruptor` | Enable Disruptor IPC (POSIX shared memory to Project 15) | false |
+| Section | Option | Description | Default |
+|---------|--------|-------------|---------|
+| `log_level` | - | Log level: trace, debug, info, warn, error, critical | info |
+| `fpga.enable` | - | Enable FPGA feed (UDP/XDP) | true |
+| `fpga.udp_ip` | - | UDP IP address to bind | 0.0.0.0 |
+| `fpga.udp_port` | - | UDP port to listen on | 5000 |
+| `fpga.use_xdp` | - | Use AF_XDP for kernel bypass | false |
+| `fpga.xdp_interface` | - | Network interface for XDP | eno2 |
+| `fpga.xdp_queue_id` | - | XDP queue ID | 0 |
+| `fpga.enable_xdp_debug` | - | Enable XDP debug logging | false |
+| `binance.enable` | - | Enable Binance WebSocket feed | false |
+| `binance.symbols` | - | Array of Binance symbols | [] |
+| `binance.stream_type` | - | Stream type: bookTicker or depth@100ms | bookTicker |
+| `tcp.enable` | - | Enable TCP server | true |
+| `tcp.port` | - | TCP server port | 9999 |
+| `mqtt.enable` | - | Enable MQTT publisher | true |
+| `mqtt.broker_url` | - | MQTT broker URL | mqtt://192.168.0.2:1883 |
+| `mqtt.client_id` | - | MQTT client ID | order_gateway |
+| `mqtt.username` | - | MQTT username | trading |
+| `mqtt.password` | - | MQTT password | trading123 |
+| `mqtt.topic` | - | MQTT topic | bbo_messages |
+| `kafka.enable` | - | Enable Kafka producer | true |
+| `kafka.broker_url` | - | Kafka broker URL | 192.168.0.203:9092 |
+| `kafka.client_id` | - | Kafka client ID | order_gateway |
+| `kafka.topic` | - | Kafka topic | bbo_messages |
+| `csv_logger.enable` | - | Enable CSV logging | false |
+| `csv_logger.file` | - | CSV log file path | "" |
+| `disruptor.enable` | - | Enable Disruptor IPC | false |
+| `disruptor.shm_name` | - | Shared memory name | gateway |
+| `performance.enable_rt` | - | Enable RT scheduling + CPU pinning | false |
+| `performance.quiet_mode` | - | Suppress console BBO output | false |
+| `performance.benchmark_mode` | - | Benchmark mode (single-threaded) | false |
 
-**Note:** XDP options require `USE_XDP` build flag and libxdp library. See [README_XDP.md](README_XDP.md) for XDP setup instructions. Disruptor mode creates shared memory at `/dev/shm/bbo_ring_gateway` for ultra-low-latency IPC with Project 15.
+### Example Configurations
+
+**XDP Mode (Kernel Bypass):**
+```json
+{
+  "log_level": "warn",
+  "fpga": {
+    "enable": true,
+    "udp_ip": "0.0.0.0",
+    "udp_port": 5000,
+    "use_xdp": true,
+    "xdp_interface": "eno2",
+    "xdp_queue_id": 3,
+    "enable_xdp_debug": false
+  },
+  "tcp": { "enable": true, "port": 9999 },
+  "mqtt": { "enable": false },
+  "kafka": { "enable": false },
+  "performance": { "enable_rt": true, "quiet_mode": true }
+}
+```
+
+**Binance WebSocket Only:**
+```json
+{
+  "log_level": "info",
+  "fpga": { "enable": false },
+  "binance": {
+    "enable": true,
+    "symbols": ["BTCUSDT", "ETHUSDT"],
+    "stream_type": "bookTicker"
+  },
+  "tcp": { "enable": true, "port": 9999 },
+  "mqtt": { "enable": true },
+  "kafka": { "enable": false }
+}
+```
+
+**Disruptor IPC Mode:**
+```json
+{
+  "log_level": "warn",
+  "fpga": {
+    "enable": true,
+    "use_xdp": true,
+    "xdp_interface": "eno2",
+    "xdp_queue_id": 3
+  },
+  "disruptor": { "enable": true },
+  "tcp": { "enable": false },
+  "mqtt": { "enable": false },
+  "kafka": { "enable": false },
+  "performance": { "enable_rt": true, "quiet_mode": true }
+}
+```
+
+**Note:** XDP options require `USE_XDP` build flag and libxdp library. See [README_XDP.md](README_XDP.md) for XDP setup instructions. Disruptor mode creates shared memory at `/dev/shm/bbo_ring_gateway` for ultra-low-latency IPC with Project 15. Binance WebSocket requires internet connectivity to `wss://stream.binance.com:9443`.
 
 ---
 
@@ -424,18 +577,21 @@ order_gateway.exe 0.0.0.0 5000 --tcp-port 9999 --csv-file bbo_log.csv --mqtt-bro
 ### Full Data Flow
 
 ```
-┌──────────────┐
-│ FPGA         │ UDP
-│ Order Book   │ @ Port 5000
-│ (8 symbols)  │
-└──────┬───────┘
-       │
-       ↓  Binary BBO packets
-┌──────────────────────────────┐
-│ C++ Order Gateway            │
-│ - Parse binary → decimal     │
-│ - Multi-protocol fanout      │
-└──┬────────┬────────┬─────────┘
+┌──────────────┐                    ┌──────────────────────┐
+│ FPGA         │ UDP                │ Binance WebSocket    │
+│ Order Book   │ @ Port 5000        │ wss://stream         │
+│ (8 symbols)  │                    │ .binance.com:9443    │
+└──────┬───────┘                    │ (Multiple symbols)   │
+       │                            └──────┬───────────────┘
+       │                                   │
+       ↓  Binary BBO packets               ↓  JSON WebSocket messages
+┌──────────────────────────────────────────────────────────────┐
+│ C++ Order Gateway                                            │
+│ - Parse binary → decimal (FPGA)                              │
+│ - Parse JSON → BBOData (Binance)                             │
+│ - Unified BBO queue (both sources)                           │
+│ - Multi-protocol fanout                                      │
+└──┬────────┬────────┬─────────────────────────────────────────┘
    │        │        │
    │        │        └──→ [Kafka: Future Analytics]
    │        │
@@ -451,6 +607,13 @@ order_gateway.exe 0.0.0.0 5000 --tcp-port 9999 --csv-file bbo_log.csv --mqtt-bro
       Java Desktop
       Trading Terminal
 ```
+
+**Data Source Characteristics:**
+
+| Source | Protocol | Format | Latency | Use Case |
+|--------|----------|--------|---------|----------|
+| **FPGA** | UDP/XDP | Binary | 0.04-0.20 μs | Ultra-low latency HFT, market making |
+| **Binance** | WebSocket (wss://) | JSON | 4.96 μs avg | Real-time cryptocurrency market data |
 
 ### Currently Active Clients
 
@@ -577,6 +740,56 @@ StdDev:   0.02 μs
 - **When to use Disruptor:** For ultra-low-latency IPC between processes (Project 14 → Project 15)
 - **Setup complexity:** XDP requires kernel bypass setup, XDP program loading, and specific queue configuration
 
+#### Binance WebSocket Feed Performance
+
+**Validated Performance (Binance WebSocket):**
+```
+=== Project 14 Binance (WebSocket) Performance Metrics ===
+Samples:  32,696
+Avg:      4.96 μs
+Min:      1.79 μs
+Max:      126.40 μs
+P50:      3.12 μs
+P95:      11.94 μs
+P99:      22.56 μs
+StdDev:   4.39 μs
+```
+
+**Test Conditions:**
+- Total messages: 32,696 (multiple symbols: BTCUSDT, ETHUSDT, SOLUSDT, etc.)
+- Stream type: `bookTicker` (best bid/ask updates)
+- Hardware: AMD Ryzen AI 9 365 w/ Radeon 880M
+- Network: Internet connection to Binance WebSocket API
+- Protocol: WebSocket over SSL/TLS (wss://)
+- Errors: 0 (automatic reconnection handled disconnects)
+
+**Key Characteristics:**
+- **Sub-5μs parsing:** Average 4.96 μs for JSON parsing and BBO conversion
+- **Consistent performance:** P50 at 3.12 μs shows most messages processed quickly
+- **Tail latency:** P99 at 22.56 μs (7× median) indicates occasional network/OS delays
+- **JSON overhead:** Higher than binary FPGA protocol (4.96 μs vs 0.20 μs) due to JSON parsing
+- **Real-world validation:** 32,696 samples from live Binance market data
+- **Multi-symbol support:** Handles multiple symbols simultaneously via combined streams
+
+**Binance vs FPGA Performance Comparison:**
+
+| Metric | FPGA (UDP) | FPGA (XDP) | Binance (WebSocket) | Notes |
+|--------|------------|------------|---------------------|-------|
+| **Avg Latency** | 0.20 μs | 0.04 μs | 4.96 μs | JSON parsing overhead |
+| **P50 Latency** | 0.19 μs | 0.04 μs | 3.12 μs | Binary vs JSON format |
+| **P95 Latency** | 0.32 μs | 0.08 μs | 11.94 μs | Network variability |
+| **P99 Latency** | 0.38 μs | 0.12 μs | 22.56 μs | Internet latency spikes |
+| **Format** | Binary | Binary | JSON | Protocol difference |
+| **Transport** | UDP (LAN) | AF_XDP (kernel bypass) | WebSocket (Internet) | Network stack overhead |
+| **Use Case** | Ultra-low latency HFT | Ultra-low latency HFT | Real-time market data | Different requirements |
+
+**Key Insights:**
+- **Binary protocol advantage:** FPGA binary format is 25× faster than JSON (0.20 μs vs 4.96 μs)
+- **Network stack impact:** Internet WebSocket adds latency compared to local UDP
+- **JSON parsing cost:** Text parsing and conversion adds ~4.5 μs overhead
+- **Real-world performance:** 4.96 μs average is acceptable for real-time market data applications
+- **Multi-exchange support:** Binance feed enables cryptocurrency market data alongside FPGA equity data
+
 ### Throughput
 
 - **Max BBO rate:** > 10,000 updates/sec (validated)
@@ -612,7 +825,7 @@ Isolated CPU cores prevent OS scheduling interference:
 
 ```bash
 # Add to /etc/default/grub
-GRUB_CMDLINE_LINUX="isolcpus=2,3,4,5 nohz_full=2,3,4,5 rcu_nocbs=2,3,4,5"
+GRUB_CMDLINE_LINUX="isolcpus=2,3,4,5 nohz_full=2,3,4,5,6 rcu_nocbs=2,3,4,5,6"
 
 # Update GRUB and reboot
 sudo update-grub
@@ -638,7 +851,8 @@ sudo setcap cap_sys_nice=eip ./order_gateway
 
 **What `--enable-rt` does:**
 - Applies `SCHED_FIFO` real-time scheduling to critical threads
-- Pins UDP thread to isolated core 2 (priority 80)
+- Pins FPGA thread (UDP/XDP) to isolated core 2 (priority 80)
+- Pins Binance thread to isolated core 6 (priority 80)
 - Pins publish thread to isolated core 3 (priority 70)
 - Reduces context switches and scheduler jitter
 
@@ -646,7 +860,8 @@ sudo setcap cap_sys_nice=eip ./order_gateway
 
 | Thread | Priority (1-99) | CPU Core | Purpose |
 |--------|-----------------|----------|---------|
-| UDP Listener | 80 (highest) | Core 2 | Critical path: UDP receive + parse |
+| FPGA Listener (UDP/XDP) | 80 (highest) | Core 2 | Critical path: UDP/XDP receive + parse |
+| Binance WebSocket | 80 (highest) | Core 6 | Binance WebSocket receive + JSON parse |
 | Publish Thread | 70 (high) | Core 3 | TCP/MQTT/Kafka distribution |
 
 **Implementation:** See [include/common/rt_config.h](include/common/rt_config.h) for `RTConfig` utilities.
@@ -665,11 +880,15 @@ sudo setcap cap_sys_nice=eip ./order_gateway
 
 ```
 14-order-gateway-cpp/
+├── config.json               # Configuration file (JSON format)
 ├── src/
-│   ├── main.cpp              # Entry point, argument parsing
+│   ├── main.cpp              # Entry point, config file loading
 │   ├── order_gateway.cpp     # Main gateway orchestration
 │   ├── udp_listener.cpp      # Async UDP listening (Boost.Asio)
+│   ├── xdp_listener.cpp      # AF_XDP kernel bypass listener
 │   ├── bbo_parser.cpp        # Binary → decimal parser
+│   ├── binance_ws_client.cpp # Binance WebSocket client
+│   ├── binance_parser.cpp    # Binance JSON message parser
 │   ├── tcp_server.cpp        # JSON TCP server
 │   ├── mqtt.cpp              # MQTT publisher (libmosquitto)
 │   ├── kafka_producer.cpp    # Kafka producer (librdkafka)
@@ -677,7 +896,11 @@ sudo setcap cap_sys_nice=eip ./order_gateway
 ├── include/
 │   ├── order_gateway.h
 │   ├── udp_listener.h
+│   ├── xdp_listener.h
 │   ├── bbo_parser.h
+│   ├── binance_ws_client.h   # Binance WebSocket client interface
+│   ├── binance_parser.h       # Binance JSON parser interface
+│   ├── bbo_data.h             # Common BBO data structure
 │   ├── tcp_server.h
 │   ├── mqtt.h
 │   ├── kafka_producer.h
@@ -695,40 +918,38 @@ sudo setcap cap_sys_nice=eip ./order_gateway
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Language** | C++17 | Modern C++ with STL |
+| **Language** | C++20 | Modern C++ with STL |
 | **Async I/O** | Boost.Asio 1.89+ | UDP, TCP sockets |
+| **WebSocket** | Boost.Beast 1.89+ | Binance WebSocket client (SSL/TLS) |
 | **Threading** | Boost.Thread | Multi-threaded architecture |
-| **JSON** | nlohmann/json 3.11+ | TCP output serialization |
+| **JSON** | nlohmann/json 3.11+ | TCP output serialization, config file parsing, Binance message parsing |
 | **MQTT** | libmosquitto 2.0+ | IoT/mobile publish |
 | **Kafka** | librdkafka 2.6+ | Future analytics |
 | **Performance** | High-res clock | Latency measurement |
-| **Logging** | std::cout | Console output |
+| **Logging** | spdlog | Structured logging with levels |
 
 ---
 
-## Configuration
+## Logging
 
-### Default Configuration (in `main.cpp`)
+Project 14 uses **spdlog** for structured logging instead of `std::cout`/`std::cerr`. The log level can be configured in `config.json`:
 
-```cpp
-#define DEFAULT_MQTT_BROKER_URL "mqtt://192.168.0.2:1883"
-#define DEFAULT_MQTT_CLIENT_ID "order_gateway"
-#define DEFAULT_MQTT_USERNAME "trading"
-#define DEFAULT_MQTT_PASSWORD "trading123"
-#define DEFAULT_MQTT_TOPIC "bbo_messages"
+- **trace**: Very detailed debugging information
+- **debug**: Debug information (useful for troubleshooting)
+- **info**: Informational messages (default)
+- **warn**: Warning messages
+- **error**: Error messages
+- **critical**: Critical errors only
 
-#define DEFAULT_KAFKA_BROKER_URL "192.168.0.203:9092"
-#define DEFAULT_KAFKA_CLIENT_ID "order_gateway"
-#define DEFAULT_KAFKA_TOPIC "bbo_messages"
+Example output:
+```
+[2025-01-15 10:23:45.123] [order_gateway] [info] Order Gateway started
+[2025-01-15 10:23:45.124] [order_gateway] [info]   FPGA Feed: 0.0.0.0 @ 5000 port (UDP mode)
+[2025-01-15 10:23:45.125] [order_gateway] [info]   TCP Port: 9999
+[2025-01-15 10:23:45.126] [order_gateway] [info] Gateway running. Press Ctrl+C to stop.
 ```
 
-### UDP Configuration
-
-- **Protocol:** UDP/IPv4
-- **Port:** 5000 (configurable)
-- **Bind Address:** 0.0.0.0 (all interfaces)
-- **Buffer Size:** 2048 bytes
-- **Async Reception:** Boost.Asio event-driven
+For production deployments, set `log_level` to `"warn"` or `"error"` to reduce log volume and improve performance.
 
 ---
 
@@ -793,16 +1014,18 @@ systemctl status kafka
 
 ## Example Output
 
+### FPGA Feed (UDP/XDP) Example
+
 ```
 Order Gateway started
-  UDP IP: 0.0.0.0 @ 5000 port
+  FPGA Feed: 0.0.0.0 @ 5000 port (UDP mode)
   TCP Port: 9999
   MQTT Broker: mqtt://192.168.0.2:1883
   MQTT Topic: bbo_messages
   Kafka Broker: 192.168.0.203:9092
   Kafka Topic: bbo_messages
 
-UDP thread started
+FPGA UDP/XDP thread started
 Publish thread started
 
 [BBO] AAPL    Bid: $290.17 (30) | Ask: $290.22 (30) | Spread: $0.05 (0.02%)
@@ -813,7 +1036,7 @@ Publish thread started
 ^C
 Stopping Order Gateway...
 
-=== Project 14 (UDP) Performance Metrics ===
+=== Project 14 FPGA (UDP) Performance Metrics ===
 Samples:  3789
 Avg:      2.09 μs
 Min:      0.42 μs
@@ -822,11 +1045,47 @@ P50:      1.04 μs
 P95:      7.01 μs
 P99:      11.91 μs
 StdDev:   2.51 μs
-[PERF] Saved 3789 samples to project14_latency.csv
+[PERF] Saved 3789 samples to project14_fpga_latency.csv
 
-UDP thread stopped
+FPGA UDP thread stopped
 Publish thread stopped
 Order Gateway stopped
+```
+
+### Binance WebSocket Feed Example
+
+```
+[2025-12-01 13:30:27.574] [order_gateway] [info] [BTCUSDT] Bid: 87089.9900 (5) | Ask: 87090.0000 (2) | Spread: 0.0100
+[2025-12-01 13:30:27.674] [order_gateway] [info] [BTCUSDT] Bid: 87089.9900 (8) | Ask: 87090.0000 (2) | Spread: 0.0100
+[2025-12-01 13:30:27.774] [order_gateway] [info] [SOLUSDT] Bid: 127.9600 (502) | Ask: 127.9700 (448) | Spread: 0.0100
+[2025-12-01 13:30:27.875] [order_gateway] [info] [ZECUSDT] Bid: 388.9800 (2) | Ask: 389.0800 (1) | Spread: 0.1000
+[2025-12-01 13:30:27.975] [order_gateway] [info] [BTCUSDT] Bid: 87091.5400 (3) | Ask: - (-) | Spread: 0.0100
+[2025-12-01 13:30:28.076] [order_gateway] [info] [BTCUSDT] Bid: 87094.1000 (1) | Ask: - (-) | Spread: 0.0100
+[2025-12-01 13:30:28.176] [order_gateway] [info] [DOGEUSDT] Bid: 0.1389 (147183) | Ask: 0.1389 (10253) | Spread: 0.0000
+[2025-12-01 13:30:28.277] [order_gateway] [info] [BTCUSDT] Bid: 87095.8000 (2) | Ask: - (-) | Spread: 0.0100
+
+^C
+[2025-12-01 13:30:28.370] [order_gateway] [info] Shutdown signal received (2)
+
+=== Project 14 Binance (WebSocket) Performance Metrics ===
+Samples:  32696
+Avg:      4.96 μs
+Min:      1.79 μs
+Max:      126.40 μs
+P50:      3.12 μs
+P95:      11.94 μs
+P99:      22.56 μs
+StdDev:   4.39 μs
+[PERF] Saved 32696 samples to project14_binance_latency.csv
+
+[2025-12-01 13:30:28.373] [order_gateway] [info] Stopping Order Gateway...
+[2025-12-01 13:30:28.373] [order_gateway] [info] [Binance] Stopping WebSocket client...
+[2025-12-01 13:30:28.377] [order_gateway] [info] Publish thread stopped
+[2025-12-01 13:30:28.396] [order_gateway] [info] Binance WebSocket thread stopped
+[2025-12-01 13:30:28.735] [order_gateway] [info] [Binance] WebSocket client stopped
+[2025-12-01 13:30:28.735] [order_gateway] [info] Binance client stopped
+[2025-12-01 13:30:28.836] [order_gateway] [info] MQTT disconnected
+[2025-12-01 13:30:28.836] [order_gateway] [info] Order Gateway stopped
 ```
 
 ---
@@ -837,7 +1096,7 @@ Order Gateway stopped
 ✅ Gateway complete and operational
 ✅ TCP client (Java Desktop) working
 ✅ MQTT clients (ESP32 + Mobile) working
-📝 Kafka consumers not yet implemented
+   Kafka consumers not yet implemented
 
 ### Future Enhancements (Optional)
 
@@ -906,6 +1165,12 @@ Order Gateway stopped
 ### Trading Systems Architecture
 - [NASDAQ ITCH 5.0 Specification](../docs/NQTVITCHspecification.pdf) - Market data protocol specification (referenced in Project 7)
 - [Xilinx Arty A7 Reference Manual](../docs/ARTY_A7_COMPLETE_REFERENCE.md) - FPGA hardware specifications
+
+### Binance API and WebSocket
+- [Binance WebSocket Streams Documentation](https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams) - Official Binance WebSocket API documentation
+- [Binance API Documentation](https://developers.binance.com/docs) - Complete Binance API reference
+- [Binance Combined Streams](https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams#general-wss-information) - Combined stream format for multiple symbols
+- [Boost.Beast Documentation](https://www.boost.org/doc/libs/1_89_0/libs/beast/doc/html/index.html) - Boost.Beast WebSocket library used for Binance client
 
 ---
 

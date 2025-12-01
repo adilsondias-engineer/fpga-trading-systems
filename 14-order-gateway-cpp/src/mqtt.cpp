@@ -1,4 +1,5 @@
 #include "mqtt.h"
+#include <spdlog/spdlog.h>
 
 MQTT::MQTT(const std::string &broker_url, const std::string &client_id, const std::string &username, const std::string &password)
     : broker_url_(broker_url), client_id_(client_id), username_(username), password_(password), mqtt_client_(nullptr), mqtt_connected_(false)
@@ -73,7 +74,7 @@ void MQTT::disconnect()
     int rc = MQTTClient_disconnect(mqtt_client_, 10000); // 10 second timeout
     if (rc != MQTTCLIENT_SUCCESS)
     {
-        std::cerr << "Warning: Failed to disconnect from MQTT broker: " << rc << std::endl;
+        spdlog::warn("Failed to disconnect from MQTT broker: {}", rc);
     }
 
     mqtt_connected_ = false;
@@ -152,8 +153,7 @@ int MQTT::messageArrived(void *context, char *topicName, int topicLen, MQTTClien
     std::string payload(static_cast<char *>(message->payload), message->payloadlen);
     std::string topic(topicName);
 
-    std::cout << "Message arrived on topic: " << topic << std::endl;
-    std::cout << "Message: " << payload << std::endl;
+    spdlog::debug("MQTT message arrived on topic: {}, message: {}", topic, payload);
 
     // Free the message
     MQTTClient_freeMessage(&message);
@@ -167,12 +167,14 @@ void MQTT::connectionLost(void *context, char *cause)
     MQTT *mqtt = static_cast<MQTT *>(context);
     mqtt->mqtt_connected_ = false;
 
-    std::cerr << "Connection lost";
     if (cause)
     {
-        std::cerr << ": " << cause;
+        spdlog::warn("MQTT connection lost: {}", cause);
     }
-    std::cerr << std::endl;
+    else
+    {
+        spdlog::warn("MQTT connection lost");
+    }
 }
 
 void MQTT::deliveryComplete(void *context, MQTTClient_deliveryToken dt)
