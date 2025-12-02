@@ -625,6 +625,12 @@ fpga-trading-systems/
 - [NASDAQ ITCH 5.0 Specification](NQTVITCHspecification.pdf)
 - [Market Making Strategies](https://quant.stackexchange.com/questions/tagged/market-making)
 
+### Binance API and WebSocket
+- [Binance WebSocket Streams Documentation](https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams) - Official Binance WebSocket API documentation
+- [Binance API Documentation](https://developers.binance.com/docs) - Complete Binance API reference
+- [Binance Combined Streams](https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams#general-wss-information) - Combined stream format for multiple symbols
+- [Boost.Beast Documentation](https://www.boost.org/doc/libs/1_89_0/libs/beast/doc/html/index.html) - Boost.Beast WebSocket library used for Binance client
+
 ---
 
 **Last Updated:** November 2025

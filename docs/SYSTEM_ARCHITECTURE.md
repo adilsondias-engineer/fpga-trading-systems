@@ -41,19 +41,19 @@ A complete **low-latency market data processing and distribution system** combin
 └────────────────────────────────────────────────┼────────────────────┘
                                                  │
                                                  ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                  SOFTWARE LAYER (C++ Gateway)                       │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐   │
-│  │ UART Parser  │→ │ BBO Decoder  │→ │ Multi-Protocol Publisher │   │
-│  │ (Raw ASCII)  │  │ (Hex→Decimal)│  │ • TCP Server             │   │
-│  │              │  │              │  │ • MQTT Publisher         │   │
-│  │              │  │              │  │ • Kafka Producer         │   │
-│  └──────────────┘  └──────────────┘  └───────────┬──────────────┘   │
-└────────────────────────────────────────────────────┼────────────────┘
-                                                     │
-                ┌────────────────────────────────────┼────────────────┐
-                │                                    │                │
-                ↓                                    ↓                ↓
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                  SOFTWARE LAYER (C++ Gateway)                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐   ┌──────────────┐  ┌───────────────┐   │
+│  │ UART Parser  │→ │ BBO Decoder  │→ │ Multi-Protocol Publisher │   │   Binance    │  │ Binance WS    │   │
+│  │ (Raw ASCII)  │  │ (Hex→Decimal)│  │ • TCP Server             │ ← │   Parser     │← │   Client      │   │
+│  │              │  │              │  │ • MQTT Publisher         │   │ JSON Protocol│  │ (Boost.Beast) │   │                                      
+│  │              │  │              │  │ • Kafka Producer         │   │              │  │               │   │
+│  └──────────────┘  └──────────────┘  └───────────┬──────────────┘   └──────────────┘  └───────────────┘   │
+└──────────────────────────────────────────────────┼────────────────────────────────────────────────────────┘
+                                                   │
+                ┌──────────────────────────────────┼────────────────┐
+                │                                  │                │
+                ↓                                  ↓                ↓
         ┌───────────────┐                   ┌───────────────┐  ┌─────────────┐
         │ TCP Endpoint  │                   │ MQTT Broker   │  │Kafka Cluster│
         │ localhost:9999│                   │ (Mosquitto)   │  │             │
@@ -70,10 +70,10 @@ A complete **low-latency market data processing and distribution system** combin
 │  │ • Charts     │      │ • Live Ticker│      │ • Android/iOS    │   │
 │  │ • TCP Client │      │ • BBO Display│      │ • Real-time BBO  │   │
 │  └──────────────┘      └──────────────┘      └──────────────────┘   │
-│                                                                      │
+│                                                                     │
 │  ┌────────────────────────────────────────────────────────────────┐ │
-│  │  Kafka → Future Analytics (Data Persistence, Replay, ML)    │ │
-│  │    Reserved for backend services, time-series DB, pipelines   │ │
+│  │  Kafka → Future Analytics (Data Persistence, Replay, ML)       │ │
+│  │    Reserved for backend services, time-series DB, pipelines    │ │
 │  └────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────┘
 ```
