@@ -31,13 +31,4 @@ echo "  - Real-time: ENABLED"
 echo "  - TCP/MQTT/Kafka: DISABLED (using Disruptor only)"
 echo ""
 # --enable-xdp-debug
-sudo ./order_gateway 0.0.0.0 $UDP_PORT \
-    --enable-disruptor \
-    --use-xdp \
-    --xdp-interface $XDP_INTERFACE \
-    --xdp-queue-id $XDP_QUEUE_ID \
-    --enable-rt \
-    --disable-tcp \
-    --disable-mqtt \
-    --disable-kafka \
-    --disable-logger
+sudo ./order_gateway

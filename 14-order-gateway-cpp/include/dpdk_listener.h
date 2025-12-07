@@ -12,6 +12,10 @@ This implementation uses the IGC PMD (Poll Mode Driver) for Intel I225/I226 NICs
 #include <memory>
 #include "bbo_parser.h"
 
+// Forward declare DPDK types to avoid including headers in header file
+// The implementation will include the full DPDK headers
+struct rte_mbuf;
+
 namespace gateway {
 
     class PerfMonitor;  // Forward declaration
@@ -77,8 +81,8 @@ namespace gateway {
         // Number of TX descriptors per queue (not used for RX-only)
         static constexpr uint16_t TX_RING_SIZE = 1024;
 
-        // RX packet buffers
-        struct rte_mbuf* rx_pkts_[RX_BURST_SIZE];
+        // RX packet buffers (using global namespace rte_mbuf from DPDK)
+        ::rte_mbuf* rx_pkts_[RX_BURST_SIZE];
 
         // Initialize DPDK EAL (Environment Abstraction Layer)
         void init_dpdk(int argc, char** argv);

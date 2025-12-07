@@ -1,18 +1,18 @@
-# Project 14: C++ Order Gateway - XDP Kernel Bypass + Disruptor IPC
+# Project 14: C++ Order Gateway - DPDK/XDP Kernel Bypass + Disruptor IPC
 
 **Platform:** Linux (Windows for legacy UDP mode)
-**Technology:** C++20, AF_XDP, LMAX Disruptor, Boost.Asio, MQTT (libmosquitto), Kafka (librdkafka)
+**Technology:** C++20, DPDK 23.11, AF_XDP, LMAX Disruptor, Boost.Asio, MQTT (libmosquitto), Kafka (librdkafka)
 **Status:** Completed and tested on hardware
 
 ---
 
 ## Overview
 
-The C++ Order Gateway is the **middleware layer** of the FPGA trading system, acting as a bridge between multiple data sources and application clients. It reads BBO (Best Bid/Offer) data from **FPGA hardware via AF_XDP kernel bypass** and **Binance WebSocket streams**, then distributes it using **LMAX Disruptor lock-free IPC** for ultra-low-latency communication or multi-protocol distribution for client applications.
+The C++ Order Gateway is the **middleware layer** of the FPGA trading system, acting as a bridge between multiple data sources and application clients. It reads BBO (Best Bid/Offer) data from **FPGA hardware via DPDK/XDP kernel bypass** and **Binance WebSocket streams**, then distributes it using **LMAX Disruptor lock-free IPC** for ultra-low-latency communication or multi-protocol distribution for client applications.
 
 **Primary Data Flow (Ultra-Low-Latency):**
 ```
-FPGA Order Book (UDP) → XDP Kernel Bypass (0.10 μs) → Disruptor Shared Memory → Market Maker FSM (4.13 μs end-to-end)
+FPGA Order Book (UDP) → DPDK Kernel Bypass (0.04 μs, 40ns avg) → Disruptor Shared Memory → Market Maker FSM
 ```
 
 **Multi-Protocol Distribution:**
@@ -22,7 +22,7 @@ Binance WebSocket (wss://) → C++ Gateway → TCP/MQTT/Kafka → Applications
 ```
 
 **Data Sources:**
-- **FPGA Feed:** Binary BBO packets via UDP/XDP (ultra-low latency, sub-microsecond parsing)
+- **FPGA Feed:** Binary BBO packets via UDP/XDP/DPDK (ultra-low latency, sub-50ns parsing with DPDK)
 - **Binance Feed:** JSON WebSocket streams (real-time cryptocurrency market data, ~5 μs parsing)
 
 ---
@@ -31,7 +31,42 @@ Binance WebSocket (wss://) → C++ Gateway → TCP/MQTT/Kafka → Applications
 
 ### Core Components
 
-**Primary Architecture (Ultra-Low-Latency Mode):**
+**Primary Architecture (Ultra-Low-Latency Mode - DPDK):**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   C++ Order Gateway (Project 14)             │
+│                                                              │
+│  ┌─────────────────┐     ┌──────────────────────────┐       │
+│  │  DPDK Listener  │────→│     BBO Parser           │       │
+│  │  (Poll Mode     │     │  (Binary Protocol)       │       │
+│  │   Driver)       │     │  40ns avg, 50ns P99      │       │
+│  │  Port 5000      │     │                          │       │
+│  └─────────────────┘     └──────────┬───────────────┘       │
+│   Zero-copy RX                      │                        │
+│   Huge pages                        ↓                        │
+│   Busy polling               ┌──────────────────────┐        │
+│                              │  Disruptor Producer  │        │
+│                              │  (Lock-Free Publish) │        │
+│                              └──────────┬───────────┘        │
+│                                         │                    │
+└─────────────────────────────────────────┼────────────────────┘
+                                          │
+                    POSIX Shared Memory (/dev/shm/bbo_ring_gateway)
+                    Ring Buffer: 1024 entries × 128 bytes = 131 KB
+                    Lock-Free IPC: Atomic sequence numbers
+                                          │
+┌─────────────────────────────────────────┼────────────────────┐
+│                                         ↓                    │
+│                              ┌──────────────────────┐        │
+│                              │  Disruptor Consumer  │        │
+│                              │  (Lock-Free Poll)    │        │
+│                              └──────────┬───────────┘        │
+│                                         │                    │
+│                   Market Maker FSM (Project 15)              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Alternative Mode (XDP Kernel Bypass):**
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   C++ Order Gateway (Project 14)             │
@@ -39,7 +74,7 @@ Binance WebSocket (wss://) → C++ Gateway → TCP/MQTT/Kafka → Applications
 │  ┌────────────────┐     ┌──────────────────────────┐        │
 │  │  XDP Listener  │────→│     BBO Parser          │        │
 │  │  (AF_XDP)      │     │  (Binary Protocol)       │        │
-│  │  Port 5000     │     │                          │        │
+│  │  Port 5000     │     │  50ns avg, 130-150ns P99 │        │
 │  └────────────────┘     └──────────┬───────────────┘        │
 │                                    │                         │
 │                                    ↓                         │
@@ -51,16 +86,9 @@ Binance WebSocket (wss://) → C++ Gateway → TCP/MQTT/Kafka → Applications
 └────────────────────────────────────┼─────────────────────────┘
                                      │
                     POSIX Shared Memory (/dev/shm/bbo_ring_gateway)
-                    Ring Buffer: 1024 entries × 128 bytes = 131 KB
-                    Lock-Free IPC: Atomic sequence numbers
                                      │
 ┌────────────────────────────────────┼─────────────────────────┐
 │                                    ↓                         │
-│                         ┌──────────────────────┐             │
-│                         │  Disruptor Consumer  │             │
-│                         │  (Lock-Free Poll)    │             │
-│                         └──────────┬───────────┘             │
-│                                    │                         │
 │                   Market Maker FSM (Project 15)              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -116,9 +144,11 @@ Binance WebSocket (wss://) → C++ Gateway → TCP/MQTT/Kafka → Applications
 
 ### 1. Data Sources
 
-#### FPGA Feed (UDP/XDP)
-- **Async UDP socket listening** using Boost.Asio (standard mode)
-- **AF_XDP kernel bypass** for ultra-low latency (optional, requires Linux + XDP program)
+#### FPGA Feed (UDP/XDP/DPDK)
+- **Multiple kernel bypass modes** for different performance requirements:
+  - **DPDK Mode:** Poll Mode Driver with zero-copy, huge pages, busy polling (FASTEST - 40ns avg)
+  - **XDP Mode:** AF_XDP kernel bypass with eBPF (50ns avg)
+  - **Standard UDP:** Boost.Asio async socket listening (200ns avg)
 - **Port:** 5000 (configurable)
 - **Format:** Binary BBO data packets from FPGA (256-byte packets)
 - **Enable/Disable:** `--disable-fpga` flag to disable FPGA feed for testing
@@ -154,27 +184,32 @@ Binance WebSocket (wss://) → C++ Gateway → TCP/MQTT/Kafka → Applications
   - Real-time cryptocurrency market data for trading systems
 - **Performance:** See Binance WebSocket Performance section below
 
+**DPDK Performance (Validated - FASTEST MODE):**
+- **Average:** 0.04 μs, **P50:** 0.04 μs, **P95:** 0.05 μs, **P99:** 0.05 μs
+- **Test Load:** 78,296 samples @ 400 Hz
+- **Consistency:** 0.01 μs standard deviation (2× better than XDP!)
+- **Improvement over XDP:** 62-67% faster P99, 2× more consistent
+- **No CPU isolation required:** DPDK built-in thread affinity achieves HFT performance
+- **See:** Performance Characteristics section below for detailed benchmarks
+
+**XDP Kernel Bypass Performance (Validated):**
+- **Average:** 0.05 μs, **P50:** 0.05 μs, **P99:** 0.13-0.15 μs
+- **Test Load:** 78,616 samples @ 400 Hz
+- **Consistency:** 0.02-0.03 μs standard deviation
+- **P95:** 0.09 μs
+- **Improvement over standard UDP:** 4× faster average
+- **See:** [README_XDP.md](README_XDP.md) for XDP setup and implementation details
+
 **Standard UDP Performance (Validated):**
 - **Average:** 0.20 μs, **P50:** 0.19 μs, **P99:** 0.38 μs
 - **Test Load:** 10,000 samples @ 400 Hz (25 seconds sustained)
 - **Consistency:** 0.06 μs standard deviation
 - **P95:** 0.32 μs (95% of messages under 0.32 μs)
 
-**XDP Kernel Bypass Performance (Validated):**
-- **Average:** 0.04 μs, **P50:** 0.03 μs, **P99:** 0.12 μs
-- **Test Load:** 78,585 samples @ 400 Hz
-- **Consistency:** 0.02 μs standard deviation
-- **P95:** 0.08 μs
-- **Improvement over standard UDP:** 5× faster average, 7× faster P95
-- **See:** [README_XDP.md](README_XDP.md) for XDP setup and implementation details
-
-**XDP + Disruptor Integration Performance (Validated):**
-- **Average:** 0.10 μs, **P50:** 0.09 μs, **P99:** 0.29 μs
-- **Test Load:** 78,514 samples @ 400 Hz
-- **End-to-End Latency:** 4.13 μs (FPGA → Market Maker FSM in Project 15)
-- **Improvement over TCP Mode:** 3× faster (12.73 μs → 4.13 μs)
-- **IPC Method:** LMAX Disruptor lock-free ring buffer (131 KB shared memory)
-- **Note:** Slightly higher than raw XDP due to Disruptor publish overhead, but enables ultra-low-latency IPC
+**Kernel Bypass Comparison:**
+- **DPDK:** 40ns avg, 50ns P99 - Best for HFT, requires DPDK setup, higher CPU (busy polling)
+- **XDP:** 50ns avg, 130-150ns P99 - Good balance, requires XDP setup + CPU isolation
+- **Standard UDP:** 200ns avg, 380ns P99 - Simplest setup, kernel overhead
 
 ### 2. BBO Parser
 - Parses binary BBO data packets
@@ -397,6 +432,70 @@ sudo ./build/order_gateway 0.0.0.0 5000 --use-xdp --xdp-interface eno2 --xdp-que
 - **Root Required:** XDP requires root privileges or CAP_NET_RAW + CAP_NET_ADMIN capabilities.
 - **See Also:** [README_XDP.md](README_XDP.md) for detailed XDP architecture and troubleshooting.
 
+### Building with DPDK Support (Linux Only)
+
+**Additional Prerequisites:**
+- DPDK 23.11 or later
+- Huge pages support (1GB or 2MB pages)
+- IOMMU/VFIO support for userspace drivers
+- Compatible NIC (Intel I219-LM, most Intel/Mellanox NICs supported)
+
+**Install DPDK:**
+```bash
+# Option 1: Install from package manager (Ubuntu 22.04+)
+sudo apt-get install -y dpdk dpdk-dev
+
+# Option 2: Build from source (recommended for latest features)
+wget https://fast.dpdk.org/rel/dpdk-23.11.tar.xz
+tar xf dpdk-23.11.tar.xz
+cd dpdk-23.11
+meson build
+cd build
+ninja
+sudo ninja install
+sudo ldconfig
+```
+
+**Configure Huge Pages:**
+```bash
+# Allocate 1GB huge pages (requires reboot)
+echo 'vm.nr_hugepages=4' | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+
+# Or allocate temporarily
+echo 4 | sudo tee /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
+
+# Verify huge pages
+grep Huge /proc/meminfo
+```
+
+**Build with DPDK:**
+```bash
+mkdir build
+cd build
+cmake -DUSE_DPDK=ON ..
+make -j$(nproc)
+```
+
+**Run gateway with DPDK:**
+```bash
+# Grant capabilities
+sudo setcap cap_net_raw,cap_net_admin,cap_sys_nice,cap_ipc_lock=eip ./build/order_gateway
+
+# Run with DPDK (polls NIC directly, zero-copy)
+sudo ./build/order_gateway
+
+# DPDK will initialize EAL (Environment Abstraction Layer) automatically
+# Huge pages will be mapped and PMD (Poll Mode Driver) will start
+```
+
+**Important Notes:**
+- **Higher CPU usage:** DPDK busy-polls the NIC (100% CPU core utilization)
+- **Best performance:** 40ns average, 50ns P99 - production HFT-grade
+- **No CPU isolation required:** DPDK built-in thread affinity is sufficient
+- **Tradeoff:** Higher power consumption vs lowest latency and jitter
+- **When to use:** Ultimate performance for HFT/market making applications
+
 ---
 
 ## Usage
@@ -610,9 +709,9 @@ Example `config.json`:
 
 **Data Source Characteristics:**
 
-| Source | Protocol | Format | Latency (CPU Optimized) | Use Case |
-|--------|----------|--------|-------------------------|----------|
-| **FPGA** | UDP/XDP | Binary | 0.05 μs P50 (0.13-0.15 μs P99) | Ultra-low latency HFT, market making |
+| Source | Protocol | Format | Latency (Best Performance) | Use Case |
+|--------|----------|--------|----------------------------|----------|
+| **FPGA** | UDP/XDP/DPDK | Binary | **0.04 μs P50, 0.05 μs P99 (DPDK)** | Ultra-low latency HFT, market making |
 | **Binance** | WebSocket (wss://) | JSON | 4.15 μs P50 (11.40 μs P99) | Real-time cryptocurrency market data |
 
 ### Currently Active Clients
@@ -739,6 +838,64 @@ StdDev:   0.02 μs
 - **When to use XDP:** For ultra-low latency trading (HFT), market making, or high-frequency analytics
 - **When to use Disruptor:** For ultra-low-latency IPC between processes (Project 14 → Project 15)
 - **Setup complexity:** XDP requires kernel bypass setup, XDP program loading, and specific queue configuration
+
+#### DPDK Kernel Bypass Mode
+
+**Validated Performance (DPDK - RT Optimized):**
+```
+=== Project 14 (DPDK) Performance Metrics ===
+Samples:  78,296
+Avg:      0.04 μs
+Min:      0.04 μs
+Max:      0.95 μs
+P50:      0.04 μs
+P95:      0.05 μs
+P99:      0.05 μs
+StdDev:   0.01 μs
+```
+
+**Test Conditions:**
+- Total messages: 78,296 (8 symbols)
+- Average rate: 400 messages/second (realistic FPGA BBO rate)
+- Hardware: AMD Ryzen AI 9 365 w/ Radeon 880M
+- Network: Intel I219-LM (eno2)
+- DPDK Version: 23.11
+- PMD: Poll Mode Driver (busy polling, zero-copy)
+- Memory: Huge pages (1GB pages)
+- RT Optimization: SCHED_FIFO priority 80, CPU core 2 pinning
+- CPU Optimizations: RT enabled (no GRUB isolation required!)
+- Errors: 0
+
+**Key Characteristics:**
+- **Ultra-low latency:** Average 0.04 μs (40 nanoseconds) matches XDP
+- **Outstanding consistency:** Standard deviation only 0.01 μs (2× better than XDP!)
+- **Extremely tight tail latency:** P99 at 0.05 μs (62-67% faster than XDP P99)
+- **Low jitter:** StdDev 0.01 μs vs XDP 0.02 μs shows superior consistency
+- **Production-grade:** Poll Mode Driver with zero-copy, kernel bypass
+- **No CPU isolation needed:** DPDK's built-in affinity achieves HFT performance without GRUB changes
+- **Cache-optimized:** DPDK packet processing designed for L1/L2 cache efficiency
+
+**DPDK vs XDP Comparison:**
+
+| Metric | XDP (CPU Optimized) | DPDK (RT Optimized) | Improvement |
+|--------|---------------------|---------------------|-------------|
+| **Avg Latency** | 0.04-0.05 μs | **0.04 μs** | Same or better |
+| **P50 Latency** | 0.05 μs | **0.04 μs** | **20% faster** |
+| **P95 Latency** | 0.09 μs | **0.05 μs** | **44% faster** |
+| **P99 Latency** | 0.13-0.15 μs | **0.05 μs** | **62-67% faster** |
+| **Std Dev** | 0.02-0.03 μs | **0.01 μs** | **2-3× more consistent** |
+| **Max Latency** | 0.91-0.96 μs | **0.95 μs** | Comparable |
+| **CPU Isolation** | Required (GRUB) | **Not required** | Simpler deployment |
+| **Setup Complexity** | eBPF program + XDP load | DPDK init + PMD config | Similar complexity |
+
+**Key Insights:**
+- **DPDK achieves better performance than XDP WITHOUT CPU isolation:** Built-in thread affinity sufficient
+- **Superior tail latency:** P99 is 0.05 μs (same as P95) - incredibly tight distribution
+- **Lower jitter:** Half the standard deviation of XDP (0.01 μs vs 0.02 μs)
+- **Production HFT-grade:** 40 ns average parsing means network jitter dominates
+- **Poll Mode Driver advantage:** Busy polling + zero-copy + huge pages = consistent sub-50ns performance
+- **When to use DPDK:** Ultimate performance for HFT, market data feeds, or low-latency applications
+- **Tradeoff:** Higher CPU usage (busy polling) vs lower latency and jitter
 
 #### Binance WebSocket Feed Performance
 

@@ -7,7 +7,9 @@
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "CMAKE_BUILD_TYPE": "Debug"
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
             }
         }
     ],

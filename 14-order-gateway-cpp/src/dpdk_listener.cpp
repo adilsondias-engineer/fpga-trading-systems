@@ -75,9 +75,22 @@ DPDKListener::DPDKListener(const std::string& iface, int port, int queue_id, boo
         // Initialize DPDK EAL
         int ret = rte_eal_init(argc, argv_vec.data());
         if (ret < 0) {
-            throw std::runtime_error("Failed to initialize DPDK EAL: " + 
-                                   std::string(rte_strerror(rte_errno)) +
-                                   "\n  Ensure hugepages are configured: sudo sysctl vm.nr_hugepages=1024");
+            std::string error_msg = "Failed to initialize DPDK EAL: " + std::string(rte_strerror(rte_errno));
+            error_msg += "\n\nTroubleshooting steps:";
+            error_msg += "\n1. Ensure hugepages are configured:";
+            error_msg += "\n   sudo sysctl vm.nr_hugepages=1024";
+            error_msg += "\n2. Check if interface is bound to DPDK driver:";
+            error_msg += "\n   dpdk-devbind.py --status";
+            error_msg += "\n3. If using igb_uio and getting PCI mapping errors, try vfio-pci instead:";
+            error_msg += "\n   # Unbind from current driver:";
+            error_msg += "\n   sudo dpdk-devbind.py --unbind 0000:07:00.0";
+            error_msg += "\n   # Bind to vfio-pci (requires IOMMU enabled):";
+            error_msg += "\n   sudo modprobe vfio-pci";
+            error_msg += "\n   sudo dpdk-devbind.py --bind=vfio-pci 0000:07:00.0";
+            error_msg += "\n4. If vfio-pci doesn't work, ensure IOMMU is enabled in BIOS and kernel:";
+            error_msg += "\n   Check: dmesg | grep -i iommu";
+            error_msg += "\n   Kernel boot params should include: intel_iommu=on iommu=pt";
+            throw std::runtime_error(error_msg);
         }
         
         dpdk_initialized = true;
@@ -195,12 +208,12 @@ void DPDKListener::setup_port() {
 void DPDKListener::configure_rx_queue(uint16_t port_id, uint16_t queue_id) {
     // Configure number of RX/TX queues
     struct rte_eth_conf port_conf = {};
-    port_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;  // No multi-queue RSS for now
+    port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_NONE;  // No multi-queue RSS for now
     
     // Enable hardware offloads if supported
     port_conf.rxmode.offloads = 0;
     
-    int ret = rte_eth_configure(port_id, 1, 1);  // 1 RX queue, 1 TX queue
+    int ret = rte_eth_dev_configure(port_id, 1, 1, &port_conf);  // 1 RX queue, 1 TX queue
     if (ret != 0) {
         throw std::runtime_error("Failed to configure port " + 
                                std::to_string(port_id) + ": " + 

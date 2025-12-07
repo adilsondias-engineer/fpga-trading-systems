@@ -559,7 +559,7 @@ namespace gateway
             }
         }
 
-        std::string mode = config_.use_xdp ? "XDP" : "UDP";
+        mode = config_.use_xdp ? "XDP" : "UDP";
         spdlog::info("FPGA {} thread stopped", mode);
     }
 

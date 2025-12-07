@@ -120,28 +120,34 @@ Progressive architecture development from digital design fundamentals to product
 - **Technologies:** Java 21, JavaFX, Gson, Maven
 - **Status:** Complete, 100% test pass rate
 
-**Project 14: C++ Order Gateway (UDP/XDP + Binance WebSocket) - Dual Feed Architecture** *[COMPLETE]**
-- **Purpose:** Multi-source market data gateway with AF_XDP kernel bypass for FPGA feed and WebSocket for cryptocurrency data
-- **Architecture:** XDP listener (AF_XDP + eBPF), Binance WebSocket client (Boost.Beast), BBO parser (binary + JSON), multi-protocol publisher
+**Project 14: C++ Order Gateway (UDP/XDP/DPDK + Binance WebSocket) - Dual Feed Architecture** *[COMPLETE]**
+- **Purpose:** Multi-source market data gateway with kernel bypass (XDP/DPDK) for FPGA feed and WebSocket for cryptocurrency data
+- **Architecture:** Multiple kernel bypass options (DPDK PMD, AF_XDP + eBPF, standard UDP), Binance WebSocket client (Boost.Beast), BBO parser (binary + JSON), multi-protocol publisher
 - **Data Sources:**
-  - FPGA Feed: Binary BBO packets via UDP/XDP (ultra-low latency, sub-microsecond parsing)
+  - FPGA Feed: Binary BBO packets via UDP/XDP/DPDK (ultra-low latency, sub-50ns parsing)
   - Binance Feed: JSON WebSocket streams (real-time cryptocurrency market data)
 - **Protocols:** TCP Server (9999), MQTT Publisher (Mosquitto), Kafka Producer
+- **Performance (DPDK Mode - RT Optimized):** 0.04 μs P50, 0.05 μs P99 (78,296 samples) - FASTEST
 - **Performance (XDP Mode - CPU Optimized):** 0.05 μs P50, 0.13-0.15 μs P99 (78,616 samples)
 - **Performance (Binance WebSocket - CPU Optimized):** 4.77 μs avg, 4.15 μs P50, 11.40 μs P99 (563,037 samples)
 - **Performance (UDP Mode):** 0.20 μs avg, 0.19 μs P50, 0.38 μs P99 (10,000 samples)
-- **Kernel Bypass:** AF_XDP with eBPF program redirecting UDP packets to userspace
+- **Kernel Bypass Options:**
+  - DPDK: Poll Mode Driver with zero-copy, huge pages, busy polling (best performance)
+  - XDP: AF_XDP with eBPF program redirecting UDP packets to userspace
+  - Standard: Kernel UDP stack with socket API
 - **RT Optimization:** SCHED_FIFO priority 80 + CPU cores 2,6 pinning (FPGA+Binance threads)
-- **CPU Optimizations:** C-state disabled, hyperthreading disabled, virtualization off
+- **CPU Optimizations:** C-state disabled, hyperthreading disabled, virtualization off (XDP only - DPDK doesn't require)
 - **Benchmark Results:**
+  - DPDK mode: 0.04 μs avg, 0.01 μs StdDev - production HFT-grade performance
+  - DPDK vs XDP: 62-67% faster P99 (0.05 μs vs 0.13-0.15 μs), 2× more consistent
   - XDP mode: 4× faster than standard UDP (0.05 μs vs 0.20 μs avg)
   - Binance WebSocket: 4.77 μs avg for JSON parsing (563K+ samples, production-scale validation)
-  - Binary protocol advantage: 95× faster than JSON (0.05 μs vs 4.77 μs)
+  - Binary protocol advantage: 95× faster than JSON (0.04 μs vs 4.77 μs with DPDK)
   - CPU optimizations: Binance P99 improved 2× (22.56 μs → 11.40 μs)
-- **CPU Isolation:** GRUB parameters (isolcpus, nohz_full, rcu_nocbs) for cores 2-6
+- **CPU Isolation:** GRUB parameters (isolcpus, nohz_full, rcu_nocbs) for cores 2-6 (XDP only - DPDK uses built-in affinity)
 - **Hardware:** AMD Ryzen AI 9 365 w/ Radeon 880M
-- **Technologies:** C++20, Boost.Asio, Boost.Beast (WebSocket), libxdp, libbpf, pthread (RT scheduling), libmosquitto, librdkafka, nlohmann/json
-- **Status:** Complete, dual-feed validated with production-scale datasets (563K+ Binance, 78K+ FPGA)
+- **Technologies:** C++20, DPDK 23.11, Boost.Asio, Boost.Beast (WebSocket), libxdp, libbpf, pthread (RT scheduling), libmosquitto, librdkafka, nlohmann/json
+- **Status:** Complete, triple-mode validated (DPDK: 78K samples, XDP: 78K samples, Binance: 563K samples)
 
 **Project 15: Market Maker FSM - Automated Quote Generation** *[COMPLETE]**
 - **Purpose:** Automated market making strategy with position management and risk controls

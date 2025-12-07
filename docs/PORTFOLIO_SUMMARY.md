@@ -202,13 +202,23 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 - [Full Application Stack - Desktop, Mobile, and IoT Clients (Part 1)](https://youtube.com/shorts/mg-O1LkSjHM?feature=share)
 - [Full Application Stack - Mobile Applications (Part 2)](https://youtube.com/shorts/PKjIAbwuvL4?feature=share)
 
-### Project 14: C++ Order Gateway (UDP/XDP + Binance WebSocket - Dual Feed Architecture)
-**Problem Solved:** Multi-source market data gateway with AF_XDP kernel bypass for FPGA feed and WebSocket for cryptocurrency data
-**Architecture:** XDP listener (AF_XDP + eBPF), Binance WebSocket client (Boost.Beast), binary+JSON BBO parser, multi-protocol publisher (TCP/MQTT/Kafka)
-**Key Innovation:** Dual-feed architecture processing both ultra-low latency FPGA binary data (0.05 μs) and real-time Binance cryptocurrency JSON streams (4.77 μs)
+### Project 14: C++ Order Gateway (UDP/XDP/DPDK + Binance WebSocket - Dual Feed Architecture)
+**Problem Solved:** Multi-source market data gateway with kernel bypass (XDP/DPDK) for FPGA feed and WebSocket for cryptocurrency data
+**Architecture:** Multiple kernel bypass options (DPDK PMD, AF_XDP + eBPF, standard UDP), Binance WebSocket client (Boost.Beast), binary+JSON BBO parser, multi-protocol publisher (TCP/MQTT/Kafka)
+**Key Innovation:** Triple-mode kernel bypass architecture achieving production HFT-grade performance (40ns avg, 50ns P99) with DPDK
 **Data Sources:**
-  - **FPGA Feed:** Binary BBO packets via UDP/XDP (ultra-low latency, sub-microsecond parsing)
+  - **FPGA Feed:** Binary BBO packets via UDP/XDP/DPDK (ultra-low latency, sub-50ns parsing with DPDK)
   - **Binance Feed:** JSON WebSocket streams (real-time cryptocurrency market data, 563K+ samples)
+**Performance DPDK Mode (RT Optimized - Validated with 78,296 samples):**
+  - **Average:** 0.04 μs (40 nanoseconds) - FASTEST MODE
+  - **P50:** 0.04 μs
+  - **P95:** 0.05 μs
+  - **P99:** 0.05 μs (62-67% faster than XDP!)
+  - **Std Dev:** 0.01 μs (2× more consistent than XDP)
+  - **Max:** 0.95 μs
+  - **RT Optimization:** SCHED_FIFO priority 80, CPU core 2 pinning
+  - **No CPU isolation required:** DPDK built-in affinity sufficient
+  - **Poll Mode Driver:** Zero-copy, huge pages, busy polling
 **Performance XDP Mode (CPU Optimized - Validated with 78,616 samples):**
   - **Average:** 0.05 μs (50 nanoseconds)
   - **P50:** 0.05 μs
@@ -231,17 +241,19 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
   - **Ring Buffers:** RX, Fill, Completion rings
   - **Queue:** Combined channel 4, queue_id 3 (hardware-specific configuration)
 **Performance Comparisons:**
-  - **XDP vs UDP:** 4× faster (0.05 μs vs 0.20 μs with CPU optimizations)
-  - **Binary vs JSON:** 95× faster (0.05 μs vs 4.77 μs) - demonstrates protocol efficiency
+  - **DPDK vs XDP:** 62-67% faster P99 (0.05 μs vs 0.13-0.15 μs), 2× more consistent (StdDev 0.01 vs 0.02 μs)
+  - **DPDK vs UDP:** 5× faster (0.04 μs vs 0.20 μs with CPU optimizations)
+  - **Binary vs JSON:** 119× faster with DPDK (0.04 μs vs 4.77 μs) - demonstrates protocol efficiency
   - **CPU optimization impact:** Binance P99 improved 2× (22.56 μs → 11.40 μs)
   - **Sample size advantage:** 563K samples provide production-realistic tail latencies
+  - **DPDK advantage:** No GRUB CPU isolation needed - built-in affinity achieves HFT performance
 **RT Optimization:**
   - **Scheduling:** SCHED_FIFO priority 80 (FPGA thread), priority 80 (Binance thread)
   - **CPU Pinning:** Core 2 (FPGA), Core 6 (Binance) - isolated
   - **CPU Isolation:** GRUB parameters (isolcpus=2-6, nohz_full=2-6, rcu_nocbs=2-6)
   - **Hardware:** AMD Ryzen AI 9 365 w/ Radeon 880M
-**Technologies:** C++20, Boost.Asio, Boost.Beast (WebSocket), libxdp, libbpf, pthread (RT scheduling), libmosquitto, librdkafka, nlohmann/json
-**Status:** Complete, dual-feed validated with production-scale datasets (563K+ Binance, 78K+ FPGA)
+**Technologies:** C++20, DPDK 23.11, Boost.Asio, Boost.Beast (WebSocket), libxdp, libbpf, pthread (RT scheduling), libmosquitto, librdkafka, nlohmann/json
+**Status:** Complete, triple-mode validated (DPDK: 78K samples, XDP: 78K samples, Binance: 563K samples)
 
 ### Project 15: Market Maker FSM - Automated Quote Generation
 **Problem Solved:** Automated market making strategy with real-time position management and risk controls

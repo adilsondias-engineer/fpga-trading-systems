@@ -156,8 +156,6 @@ if(USE_DPDK)
     if(DPDK_FOUND)
         message(STATUS "DPDK include dirs: ${DPDK_INCLUDE_DIRS}")
         message(STATUS "DPDK libraries: ${DPDK_LIBRARIES}")
-        target_include_directories(order_gateway PRIVATE ${DPDK_INCLUDE_DIRS})
-        target_compile_definitions(order_gateway PRIVATE USE_DPDK)
         set(HAVE_DPDK TRUE)
     else()
         message(WARNING "DPDK not found!")
@@ -191,6 +189,12 @@ target_link_libraries(order_gateway PRIVATE Threads::Threads)
 
 # Link DPDK libraries if enabled
 if(USE_DPDK AND HAVE_DPDK)
+    # Add DPDK include directories and compile definitions
+    if(DPDK_INCLUDE_DIRS)
+        target_include_directories(order_gateway PRIVATE ${DPDK_INCLUDE_DIRS})
+    endif()
+    target_compile_definitions(order_gateway PRIVATE USE_DPDK)
+    
     if(DPDK_LIBRARIES)
         target_link_libraries(order_gateway PRIVATE ${DPDK_LIBRARIES})
     elseif(DPDK_LDFLAGS)
