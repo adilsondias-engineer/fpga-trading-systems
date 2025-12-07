@@ -495,6 +495,7 @@ sudo ./build/order_gateway
 - **No CPU isolation required:** DPDK built-in thread affinity is sufficient
 - **Tradeoff:** Higher power consumption vs lowest latency and jitter
 - **When to use:** Ultimate performance for HFT/market making applications
+- **See Also:** [DPDK Documentation References](#dpdk-data-plane-development-kit) for detailed setup guides and architecture information
 
 ---
 
@@ -1299,6 +1300,17 @@ StdDev:   4.39 μs
 ---
 
 ## References
+
+### DPDK (Data Plane Development Kit)
+- [DPDK Official Documentation](https://doc.dpdk.org/) - Complete DPDK documentation portal
+- [DPDK Getting Started Guide](https://doc.dpdk.org/guides/linux_gsg/index.html) - Linux installation and setup
+- [DPDK Programmer's Guide](https://doc.dpdk.org/guides/prog_guide/index.html) - Core DPDK concepts and APIs
+- [DPDK Poll Mode Drivers](https://doc.dpdk.org/guides/nics/index.html) - NIC-specific PMD documentation
+- [DPDK Sample Applications](https://doc.dpdk.org/guides/sample_app_ug/index.html) - Example DPDK applications
+- [DPDK Performance Reports](https://core.dpdk.org/perf-reports/) - Official DPDK performance benchmarks
+- [Intel DPDK White Paper](https://www.intel.com/content/www/us/en/developer/articles/technical/dpdk-performance-report.html) - DPDK architecture and performance analysis
+- [DPDK for High-Frequency Trading](https://www.net.in.tum.de/fileadmin/bibtex/publications/papers/DPDK-HFT.pdf) - Academic paper on DPDK for trading systems
+- [DPDK vs Kernel Networking](https://blog.selectel.com/introduction-dpdk-architecture-principles/) - Architecture comparison and principles
 
 ### AF_XDP and Kernel Bypass
 - [AF_XDP - Linux Kernel Documentation](https://www.kernel.org/doc/html/latest/networking/af_xdp.html) - Official AF_XDP documentation
