@@ -28,10 +28,28 @@ namespace gateway
         // Initialize components
         try
         {
-            // Create FPGA listener (XDP or UDP) if enabled
+            // Create FPGA listener (DPDK, XDP, or UDP) if enabled
             if (config_.enable_fpga) {
+#ifdef USE_DPDK
+                if (config_.use_dpdk) {
+                    try {
+                        if (config_.enable_dpdk_debug) {
+                            spdlog::debug("[DPDK] Creating DPDK listener on interface: {}", config_.dpdk_interface);
+                        }
+                        dpdk_listener_ = std::make_unique<DPDKListener>(config_.dpdk_interface, config_.udp_port, config_.dpdk_queue_id, config_.enable_dpdk_debug);
+                        // Set perf monitor immediately after creation (before any auto-start in read_bbo)
+                        dpdk_listener_->setPerfMonitor(&parse_latency_);
+                        if (config_.enable_dpdk_debug) {
+                            spdlog::debug("[DPDK] DPDK listener created (interface: {}, port: {})", config_.dpdk_interface, config_.udp_port);
+                        }
+                    } catch (const std::exception& e) {
+                        spdlog::warn("[DPDK] Failed to create DPDK listener: {}, falling back to XDP/UDP", e.what());
+                        config_.use_dpdk = false;
+                    }
+                }
+#endif
 #ifdef USE_XDP
-                if (config_.use_xdp) {
+                if (!config_.use_dpdk && config_.use_xdp) {
                     try {
                         if (config_.enable_xdp_debug) {
                             spdlog::debug("[XDP] Creating XDP listener on interface: {}", config_.xdp_interface);
@@ -49,7 +67,7 @@ namespace gateway
                 }
 #endif
 
-                if (!config_.use_xdp) {
+                if (!config_.use_dpdk && !config_.use_xdp) {
                     udp_listener_ = std::make_unique<UDPListener>(config_.udp_ip, config_.udp_port);
                     // Set perf monitor for UDP listener
                     udp_listener_->setPerfMonitor(&parse_latency_);
@@ -136,16 +154,23 @@ namespace gateway
             }
         }
 
-        // Start FPGA listener (UDP/XDP) if enabled
+        // Start FPGA listener (DPDK/XDP/UDP) if enabled
         if (config_.enable_fpga) {
+#ifdef USE_DPDK
+            if (config_.use_dpdk && dpdk_listener_ && !dpdk_listener_->isRunning())
+            {
+                dpdk_listener_->start();
+            }
+            else
+#endif
 #ifdef USE_XDP
-            if (config_.use_xdp && xdp_listener_ && !xdp_listener_->isRunning())
+            if (!config_.use_dpdk && config_.use_xdp && xdp_listener_ && !xdp_listener_->isRunning())
             {
                 xdp_listener_->start();
             }
             else
 #endif
-            if (udp_listener_ && !udp_listener_->isRunning())
+            if (!config_.use_dpdk && !config_.use_xdp && udp_listener_ && !udp_listener_->isRunning())
             {
                 // Enable benchmark mode in UDPListener to skip queue operations
                 if (config_.benchmark_mode)
@@ -192,10 +217,16 @@ namespace gateway
         {
             spdlog::info("[RT] Applying real-time optimizations...");
 
-            // FPGA thread (UDP/XDP): highest priority, pinned to core 2
-            // This thread handles both UDP and XDP listeners
+            // FPGA thread (DPDK/XDP/UDP): highest priority, pinned to core 2
+            // This thread handles DPDK, XDP, and UDP listeners
             if (config_.enable_fpga && udp_thread_.joinable()) {
-                std::string mode = config_.use_xdp ? "XDP" : "UDP";
+                std::string mode = "UDP";
+#ifdef USE_DPDK
+                if (config_.use_dpdk) mode = "DPDK";
+#endif
+#ifdef USE_XDP
+                if (!config_.use_dpdk && config_.use_xdp) mode = "XDP";
+#endif
                 if (!RTConfig::applyRTOptimization(
                         udp_thread_.native_handle(),
                         ThreadConfig::UDP_XDP_LISTENER_PRIORITY,
@@ -286,7 +317,13 @@ namespace gateway
 
         // Print performance statistics BEFORE joining threads
         if (config_.enable_fpga && parse_latency_.count() > 0) {
-            std::string mode = config_.use_xdp ? "XDP" : "UDP";
+            std::string mode = "UDP";
+#ifdef USE_DPDK
+            if (config_.use_dpdk) mode = "DPDK";
+#endif
+#ifdef USE_XDP
+            if (!config_.use_dpdk && config_.use_xdp) mode = "XDP";
+#endif
             parse_latency_.printSummary("Project 14 FPGA (" + mode + ")");
             parse_latency_.saveToFile("project14_fpga_latency.csv");
         }
@@ -392,7 +429,14 @@ namespace gateway
 
     void OrderGateway::udpThreadFunc()
     {
-        spdlog::info("FPGA UDP/XDP thread started");
+        std::string mode = "UDP";
+#ifdef USE_DPDK
+        if (config_.use_dpdk) mode = "DPDK";
+#endif
+#ifdef USE_XDP
+        if (!config_.use_dpdk && config_.use_xdp) mode = "XDP";
+#endif
+        spdlog::info("FPGA {} thread started", mode);
 
         while (running_)
         {
@@ -400,9 +444,17 @@ namespace gateway
             {
                 BBOData bbo;
                 
+#ifdef USE_DPDK
+                // Use DPDK listener if enabled
+                if (config_.use_dpdk && dpdk_listener_)
+                {
+                    bbo = dpdk_listener_->read_bbo();
+                }
+                else
+#endif
 #ifdef USE_XDP
                 // Use XDP listener if enabled
-                if (config_.use_xdp && xdp_listener_)
+                if (!config_.use_dpdk && config_.use_xdp && xdp_listener_)
                 {
                     bbo = xdp_listener_->read_bbo();
                 }

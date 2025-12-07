@@ -6,5 +6,13 @@
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
         ".mule": true
-    }
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/g++",
+    "C_Cpp.default.cStandard": "c17",
+    "C_Cpp.default.cppStandard": "c++20",
+    "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.configurationWarnings": "enabled",
+    "cmake.sourceDirectory": "/work/projects/fpga-trading-systems/14-order-gateway-cpp",
+    "git.ignoreLimitWarning": true
 }

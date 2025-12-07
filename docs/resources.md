@@ -591,4 +591,106 @@ Key insights: Production HFT systems use software feed handlers + FPGA accelerat
 
 ---
 
-_This resource list grows with each project. Last updated: Project 16 (Order Execution Engine) + ByteMonk HFT Videos_
+## ARM Cortex-M0 & PY32F030 (Project 19)
+
+### PY32F030 Microcontroller
+
+**Official Documentation:**
+- [Puya PY32F030 Series](https://www.puyasemi.com/cpzx3/info_271_itemid_87.html) - Official product page
+- [PY32F030 Datasheet](https://www.puyasemi.com/uploadfiles/2022/02/PY32F030x4x6x7x8.pdf) - Electrical characteristics, pinout, memory map
+
+**Key Features:**
+- **Core:** ARM Cortex-M0 @ 24 MHz (configurable up to 48 MHz)
+- **Memory:** 64 KB Flash, 8 KB SRAM
+- **Peripherals:** 2× SPI (up to 24 MHz master), 2× UART, 2× I2C, Timers, ADC, GPIO
+- **Package:** TSSOP-20, QFN-32
+- **Voltage:** 1.7V - 5.5V operating range
+- **Cost:** < $0.50 USD (extremely cost-effective for monitoring/UI tasks)
+
+### ARM Cortex-M0 Architecture
+
+**ARM Documentation:**
+- [Cortex-M0 Technical Reference Manual](https://developer.arm.com/documentation/ddi0432/c/) - ARM official TRM
+- [Cortex-M0 Devices Generic User Guide](https://developer.arm.com/documentation/dui0497/a/) - Programming model, instruction set
+
+**Architecture Highlights:**
+- **32-bit RISC:** ARMv6-M instruction set (Thumb subset only)
+- **Pipeline:** 3-stage pipeline (Fetch, Decode, Execute)
+- **Performance:** ~0.95 DMIPS/MHz
+- **Code Density:** Excellent (16-bit Thumb instructions)
+- **Power:** Ultra-low power consumption (< 10 μA/MHz active)
+
+### SPI Protocol (Mode 0: CPOL=0, CPHA=0)
+
+**SPI Mode 0 Characteristics:**
+- **CPOL=0:** Clock idles low
+- **CPHA=0:** Data sampled on rising edge, shifted on falling edge
+- **Timing:** MSB-first or LSB-first (configured in SPI control register)
+- **CS# (Chip Select):** Active low, asserted before transaction, deasserted after
+- **Full-Duplex:** Simultaneous MOSI (Master Out) and MISO (Slave In) transmission
+
+**Key Timing Parameters:**
+- **Setup Time (tSU):** Data valid before clock edge (typically 5-10 ns)
+- **Hold Time (tH):** Data stable after clock edge (typically 5-10 ns)
+- **Clock Frequency:** Up to 25 MHz for simple FPGA protocols
+- **Inter-Byte Gap:** Optional delay between bytes (PY32 SPI master configurable)
+
+### Development Tools
+
+**PY32 Toolchain:**
+- [GNU ARM Embedded Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain) - GCC for ARM Cortex-M
+- [pyOCD](https://pyocd.io/) - Python-based debugger for ARM Cortex-M (used in Project 19)
+  - `pip install pyocd` - Simple installation via pip
+  - Supports ST-Link V2, CMSIS-DAP, and other debug probes
+  - Excellent PY32F030 support with GDB server capability
+- [OpenOCD](https://openocd.org/) - Alternative open-source debugger for ARM
+- [ST-Link V2 Utility](https://www.st.com/en/development-tools/st-link-v2.html) - Programming and debugging (compatible with PY32)
+
+**Programming Interface:**
+- **ST-Link V2:** Low-cost USB programmer/debugger (SWD interface) - used with pyOCD in Project 19
+- **UART Bootloader:** PY32F030 has built-in UART bootloader for firmware updates
+- **SWD (Serial Wire Debug):** 2-wire debug interface (SWDIO, SWCLK)
+
+**Project 19 Development Stack:**
+- **Debugger:** pyOCD (Python-based, excellent ST-Link V2 support)
+- **GDB:** ARM GDB from GNU ARM Embedded Toolchain
+- **Build System:** Makefile with arm-none-eabi-gcc
+- **Flash Tool:** pyOCD flash command or ST-Link Utility
+
+### SPI Protocol Best Practices (Project 19 Lessons)
+
+**Clock Domain Crossing:**
+- Always use 2-FF synchronizer for asynchronous SPI signals (SCK, MOSI, CS#) crossing into FPGA clock domain
+- Edge detection on synchronized signals, not raw SPI clock
+
+**Pipeline Timing:**
+- Account for sequential register reads (BRAM-style access creates 1-2 cycle delay)
+- State machine must wait for pipeline to complete before shifting data
+- Example: bit_count 0→1→2 setup phase before data shift phase
+
+**Protocol Edge Cases:**
+- **Address Byte Trailing Edge:** Skip first falling edge after address byte to prevent premature shift
+- **CS# Glitches:** Add debouncing or minimum CS# low time requirement (typically 2× SPI clock period)
+- **Back-to-Back Transactions:** Ensure minimum CS# high time between transactions (1 SPI clock period minimum)
+
+**Testing Methodology:**
+- **Testbench Validation:** Self-checking VHDL testbench with SPI transaction simulation
+- **Hardware Stress Test:** 10,000+ transactions with error counting (detect timing violations)
+- **Edge Case Testing:** Test CS# glitches, clock frequency limits, temperature variation
+
+### Reference Designs
+
+**FPGA-Microcontroller Integration:**
+- Project 19 demonstrates production-grade heterogeneous system integration
+- Modular SPI architecture (spi_slave_core → spi_register_if → application) enables reusability
+- Pattern: FPGA handles time-critical paths (< 5 μs), microcontroller handles UI/monitoring/configuration
+
+**Key Architectural Lessons:**
+- **Separation of Concerns:** FPGA → low-latency processing, MCU → slow UI/display tasks
+- **Dynamic Configuration:** SPI write registers enable runtime parameter updates (no FPGA reprogramming)
+- **Independent Monitoring:** External watchdog can detect and recover from FPGA hangs
+- **Scalability:** Register bank architecture scales from 6 registers (demo) to 256 registers (production)
+
+---
+
+_This resource list grows with each project. Last updated: Project 19 (PY32F030 FPGA Status Display via SPI)_

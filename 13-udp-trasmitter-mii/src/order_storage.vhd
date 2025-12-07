@@ -65,7 +65,7 @@ architecture Behavioral of order_storage is
     signal order_count_reg : unsigned(15 downto 0) := (others => '0');
 
     -- Separate storage for valid bits (to avoid read-modify-write on main BRAM)
-    -- This is a small array (1024 bits) that can be LUTRAM without issue
+    -- Small array (1024 bits) can be LUTRAM without issue
     type valid_bits_t is array (0 to MAX_ORDERS-1) of std_logic;
     signal valid_bits : valid_bits_t := (others => '0');
 
@@ -93,7 +93,7 @@ begin
                     wr_data := order_to_slv(wr_order);
                     
                     -- Write to BRAM (signal-based, following rams_sdp_record.vhd pattern)
-                    -- This is a pure write operation - no read-modify-write pattern
+                    -- Pure write operation - no read-modify-write pattern
                     bram(to_integer(unsigned(wr_addr))) <= wr_data;
                     
                     -- Update separate valid bits storage (read from this, not BRAM)

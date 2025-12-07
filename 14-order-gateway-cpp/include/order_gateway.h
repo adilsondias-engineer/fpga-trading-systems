@@ -5,6 +5,9 @@
 #ifdef USE_XDP
 #include "xdp_listener.h"
 #endif
+#ifdef USE_DPDK
+#include "dpdk_listener.h"
+#endif
 #include "binance_ws_client.h"
 #include "tcp_server.h"
 #include "csv_logger.h"
@@ -54,6 +57,12 @@ namespace gateway
             std::string xdp_interface = "eno2";
             int xdp_queue_id = 0;
             bool enable_xdp_debug = false;
+
+            // DPDK configuration
+            bool use_dpdk = false;
+            std::string dpdk_interface = "eno2";
+            int dpdk_queue_id = 0;
+            bool enable_dpdk_debug = false;
 
 
             // MQTT configuration
@@ -132,6 +141,9 @@ namespace gateway
         std::unique_ptr<UDPListener> udp_listener_;
 #ifdef USE_XDP
         std::unique_ptr<XDPListener> xdp_listener_;
+#endif
+#ifdef USE_DPDK
+        std::unique_ptr<DPDKListener> dpdk_listener_;
 #endif
         std::unique_ptr<BinanceWSClient> binance_client_;
         std::unique_ptr<TCPServer> tcp_server_;

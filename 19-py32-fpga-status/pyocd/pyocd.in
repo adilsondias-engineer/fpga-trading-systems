@@ -1,0 +1,7 @@
+probes:
+  probes:
+    59502731:
+      target_override:  py32f030x8
+
+pack:
+  - @CMAKE_SOURCE_DIR@/pyocd/Puya.PY32F0xx_DFP.1.1.7.pack

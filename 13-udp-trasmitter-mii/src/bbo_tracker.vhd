@@ -158,7 +158,7 @@ begin
                         if level_valid = '1' and level_data.valid = '1' and level_data.side = '0' then
                             -- Found valid bid level
                             if best_bid_found = '0' then
-                                -- This is the FIRST bid found
+                                -- First bid found
                                 best_bid_price_reg <= level_data.price;
                                 best_bid_shares_reg <= level_data.total_shares;
                                 best_bid_found <= '1';
@@ -203,7 +203,7 @@ begin
                         if level_valid = '1' and level_data.valid = '1' and level_data.side = '1' then
                             -- Found valid ask level
                             if best_ask_found = '0' then
-                                -- This is the FIRST ask found
+                                -- First ask found
                                 best_ask_price_reg <= level_data.price;
                                 best_ask_shares_reg <= level_data.total_shares;
                                 best_ask_found <= '1';

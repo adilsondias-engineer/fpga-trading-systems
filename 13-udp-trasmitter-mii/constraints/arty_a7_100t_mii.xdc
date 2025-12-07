@@ -105,6 +105,14 @@ set_property -dict { PACKAGE_PIN J3 IOSTANDARD LVCMOS33 } [get_ports { led_rgb[8
 set_property -dict {PACKAGE_PIN A9  IOSTANDARD LVCMOS33} [get_ports uart_txd_in]
 set_property -dict {PACKAGE_PIN D10 IOSTANDARD LVCMOS33} [get_ports uart_rxd_out]
 
+####################################################################################
+## SPI Slave Interface (PY32F030)
+## ChipKit PMOD JA Connector
+####################################################################################
+set_property -dict { PACKAGE_PIN G13   IOSTANDARD LVCMOS33 } [get_ports { spi_sck }];   # JA1
+set_property -dict { PACKAGE_PIN B11   IOSTANDARD LVCMOS33 } [get_ports { spi_mosi }];  # JA2
+set_property -dict { PACKAGE_PIN A11   IOSTANDARD LVCMOS33 } [get_ports { spi_miso }];  # JA3
+set_property -dict { PACKAGE_PIN D12   IOSTANDARD LVCMOS33 } [get_ports { spi_cs_n }]; # JA4
 
 ####################################################################################
 ## Timing Constraints
@@ -126,6 +134,10 @@ set_false_path -from [get_ports { eth_mdio }];
 # Asynchronous reset path
 set_false_path -from [get_ports reset_n];
 set_false_path -from [get_ports reset_btn];
+
+# SPI interface is asynchronous (from PY32, ~1 MHz max)
+set_false_path -from [get_ports { spi_sck spi_mosi spi_cs_n }];
+set_false_path -to [get_ports { spi_miso }];
 
 # LED outputs are asynchronous (no timing requirements)
 set_false_path -to [get_ports led[*]];

@@ -13,7 +13,7 @@ Hardware-accelerated market data processing and order book management for low-la
 
 **Technical Background:**
 - 20+ years C++ systems engineering (distributed systems, real-time processing, network protocols)
-- 17 years(since 2008) intermittently futures trading (S&P 500, Nasdaq 100)
+- 17 years(since 2008) of personal intermittently futures trading (S&P 500, Nasdaq 100)
 - FPGA hardware acceleration specialist focusing on trading infrastructure
 
 **Domain Expertise:** Combining software engineering experience with active trading knowledge to build FPGA-based market data systems and order management infrastructure.
@@ -229,6 +229,27 @@ Progressive architecture development from digital design fundamentals to product
 - **Technologies:** C++20, fork/exec, signal handling, shared memory (shm_open), Prometheus, nlohmann/json
 - **Status:** Complete, matches original Project 17 vision (full trading loop + metrics + monitoring)
 
+**Project 19: PY32F030 FPGA Status Display** **[COMPLETE]**
+- **Purpose:** External ARM Cortex-M0 microcontroller for FPGA monitoring and configuration via SPI interface
+- **Architecture:** Modular SPI slave (spi_slave_core → spi_register_if → application), 6-register bank, clock domain crossing
+- **Key Innovation:** Heterogeneous system integration—dedicated microcontroller handles slow UI/monitoring while FPGA focuses on ultra-low-latency processing
+- **Features:**
+  - **6-register bank:** 4 read-only status inputs (ORDER_COUNT, BBO_COUNT, LATENCY_P50, STATUS) + 2 read-write configuration outputs (SYMBOL_EN, THRESHOLD)
+  - **SPI Mode 0** (CPOL=0, CPHA=0), up to 10 MHz tested
+  - **Production-grade timing:** 2-cycle pipeline for register reads, proper setup/hold timing for address byte trailing edge
+  - **Clock domain crossing:** SPI_SCK → 100 MHz via 2-FF synchronizer, metastability protection
+  - **Generic architecture:** spi_slave_core reusable across projects, spi_register_if application-specific
+- **PY32F030 Hardware:** ARM Cortex-M0 @ 24 MHz, 64 KB Flash, 8 KB SRAM, SPI master (up to 12 MHz)
+- **Register Protocol:** [CMD_BYTE][ADDR_BYTE][DATA_32BIT], CMD=0x01 (READ) / 0x02 (WRITE), big-endian data format
+- **Critical Bug Fixes:**
+  - **Pipeline timing:** Restructured SEND_DATA state into setup phase (bit_count 0→1→2) to wait for 2-cycle register fetch
+  - **Address byte trailing edge:** Added explicit bit_count=2 check to skip premature shift (fixed doubled values 2,4,6,8 → 1,2,3,4)
+- **Validation:** 10,000+ SPI transactions tested, zero errors detected
+- **Example Output:** `Orders: 1 | BBO: 2 | Lat: 3 ns | Status: 0x00000004 | Symbol: 0xFF | Threshold: 1000`
+- **Architecture Benefits:** Resource optimization (FPGA → time-critical paths only), dynamic configuration (PY32 writes), independent monitoring (external watchdog), scalable to 256 registers
+- **Technologies:** VHDL (FPGA), C (PY32 firmware), SPI Mode 0, 2-FF CDC synchronizers, BRAM-style register bank
+- **Status:** Functional, SPI register interface complete and validated with 10k message test
+
 ### Foundation Projects (Projects 1-5)
 
 **Digital Design Fundamentals:**
@@ -264,12 +285,12 @@ Each project includes:
 **End-to-End Trading System Pipeline:**
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                         FPGA Layer (VHDL - Projects 6-8, 13)                          │
+│                         FPGA Layer (VHDL - Projects 6-8, 13)                         │
 │  Ethernet RX → UDP/IP → ITCH 5.0 → Order Book → BBO Tracker → UDP TX (Project 13)    │
-│    (PHY MII)   100 MHz   100 MHz     100 MHz       100 MHz      25 MHz (MII TX)       │
-│     25 MHz                                                                            │
-│             └── Gray Code CDC ──┘                                                     │
-│                                                        └─→ UART (debug only)           │
+│    (PHY MII)   100 MHz   100 MHz     100 MHz       100 MHz      25 MHz (MII TX)      │
+│     25 MHz                                                                           │
+│             └── Gray Code CDC ──┘                                                    │
+│                                                        └─→ UART (debug only)         │
 └──────────────────────────────────────────────────────────────────────────────────────┘
                                           │
                                           │ UDP/IP (Binary BBO packets, 192.168.0.212 → .93)
@@ -277,8 +298,8 @@ Each project includes:
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
 │               C++ Gateway Layer (Project 14) - XDP Kernel Bypass (0.04 μs)           │
 │  XDP Listener (AF_XDP) → BBO Parser (binary) → Multi-Protocol Publisher              │
-│    ↑ eBPF redirect                                                                    │
-└─────────┬───────────────┬──────────────────┬──────────────────────────────────────┘
+│    ↑ eBPF redirect                                                                   │
+└─────────┬───────────────┬──────────────────┬─────────────────────────────────────────┘
           │               │                  │
           │ TCP :9999     │ MQTT             │ Kafka (Future)
           │               │ 192.168.0.2:1883 │ 192.168.0.203:9092
@@ -305,7 +326,7 @@ Each project includes:
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
 │                    Market Maker FSM (Project 15) - 12.73 μs                          │
 │  TCP Client → BBO Parser (JSON) → Fair Value → Quote Gen → Position Tracker          │
-│                                       ↓                                               │
+│                                       ↓                                              │
 │                               FSM States (IDLE → CALCULATE → QUOTE →                 │
 │                                         RISK_CHECK → ORDER_GEN → WAIT_FILL)          │
 └──────────────────────────────────────────────────────────────────────────────────────┘

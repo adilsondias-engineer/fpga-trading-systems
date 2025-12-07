@@ -78,6 +78,24 @@ OrderGateway::Config load_config(const std::string& config_file)
             {
                 config.udp_port = fpga["udp_port"];
             }
+#ifdef USE_DPDK
+            if (fpga.contains("use_dpdk"))
+            {
+                config.use_dpdk = fpga["use_dpdk"];
+            }
+            if (fpga.contains("dpdk_interface"))
+            {
+                config.dpdk_interface = fpga["dpdk_interface"].get<std::string>();
+            }
+            if (fpga.contains("dpdk_queue_id"))
+            {
+                config.dpdk_queue_id = fpga["dpdk_queue_id"];
+            }
+            if (fpga.contains("enable_dpdk_debug"))
+            {
+                config.enable_dpdk_debug = fpga["enable_dpdk_debug"];
+            }
+#endif
 #ifdef USE_XDP
             if (fpga.contains("use_xdp"))
             {

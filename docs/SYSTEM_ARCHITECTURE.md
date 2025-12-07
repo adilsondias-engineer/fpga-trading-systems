@@ -1,9 +1,9 @@
 # FPGA Trading System - Complete Architecture & Design
 
-**Date:** November 2025
-**Status:** FUNCTIONAL - XDP Kernel Bypass Gateway + Market Maker + Full Application Suite
-**Projects:** 6-18 (Network Stack → Order Book → UDP TX → XDP Gateway → Market Maker + Desktop/Mobile/IoT Applications)
-**Development Time:** 360+ hours
+**Date:** December 2025
+**Status:** FUNCTIONAL - XDP Kernel Bypass Gateway + Market Maker + Full Application Suite + PY32 FPGA Monitoring
+**Projects:** 6-19 (Network Stack → Order Book → UDP TX → XDP Gateway → Market Maker + Desktop/Mobile/IoT Applications + PY32 SPI Monitoring)
+**Development Time:** 380+ hours
 
 ---
 
@@ -146,6 +146,38 @@ A complete **low-latency market data processing and distribution system** combin
   Source: 192.168.0.212:5000 (FPGA MAC: 00:18:3E:04:5D:E7)
   Payload: 256 bytes binary (BBO data at bytes 228-255)
   ```
+
+#### Project 19: PY32F030 FPGA Status Display (SPI Monitoring)
+- **Purpose:** External ARM Cortex-M0 microcontroller for FPGA monitoring and configuration via SPI
+- **Architecture:**
+  - **spi_slave_core.vhd:** Generic SPI Mode 0 protocol handler (reusable across projects)
+  - **spi_register_if.vhd:** Application-specific 6-register bank (4 read-only status + 2 read-write config)
+  - **spi_slave.vhd:** Backward compatibility wrapper for integration
+  - **PY32F030 Firmware:** SPI master, register read/write, UART display formatting
+- **Register Bank:**
+  - **Status Inputs (Read-Only):** ORDER_COUNT, BBO_COUNT, LATENCY_P50, STATUS
+  - **Configuration Outputs (Read-Write):** SYMBOL_EN (8-bit symbol filter), THRESHOLD (BBO spread threshold)
+- **SPI Protocol:**
+  ```
+  Transaction Format: [CMD_BYTE][ADDR_BYTE][DATA_32BIT]
+  Commands: 0x01=READ, 0x02=WRITE
+  Data Format: 32-bit big-endian (MSB first), matches UDP/IP network byte order
+  SPI Mode 0: CPOL=0, CPHA=0, up to 10 MHz tested
+  ```
+- **Clock Domain Crossing:**
+  - Variable SPI clock (up to 10 MHz) → 100 MHz FPGA via 2-FF synchronizer
+  - Edge detection on synchronized signals (rising/falling for SEND_DATA/RECEIVE_DATA states)
+  - 10,000+ SPI transactions tested, zero errors, no metastability issues
+- **Critical Bug Fixes:**
+  - **Pipeline Timing:** 2-cycle register fetch delay handled via setup phase (bit_count 0→1→2)
+  - **Address Byte Trailing Edge:** Explicit bit_count=2 check skips premature shift on falling edge
+- **PY32F030 Hardware:** ARM Cortex-M0 @ 24 MHz, 64 KB Flash, 8 KB SRAM, SPI master (up to 12 MHz)
+- **Architecture Benefits:**
+  - **Resource Optimization:** FPGA LUTs/BRAM dedicated to time-critical paths only (< 5 μs wire-to-BBO)
+  - **Dynamic Configuration:** PY32 writes SYMBOL_EN, THRESHOLD via SPI (no FPGA reprogramming)
+  - **Independent Monitoring:** External watchdog can reset FPGA if status registers freeze
+  - **Scalability:** Register bank expandable to 256 registers (8-bit address space)
+- **Example Output:** `Orders: 1 | BBO: 2 | Lat: 3 ns | Status: 0x00000004 | Symbol: 0xFF | Threshold: 1000`
 
 ---
 

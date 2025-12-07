@@ -1,0 +1,627 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="spi_slave_tb_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="glbl" />
+            <top_module name="spi_slave_tb" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="10.000200 us"></ZoomStartTime>
+      <ZoomEndTime time="70.000200 us"></ZoomEndTime>
+      <Cursor1Time time="50.635000 us"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="185"></NameColumnWidth>
+      <ValueColumnWidth column_width="377"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="151" />
+   <wvobject fp_name="/spi_slave_tb/uut/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/reset" type="logic">
+      <obj_property name="ElementShortName">reset</obj_property>
+      <obj_property name="ObjectShortName">reset</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_sck" type="logic">
+      <obj_property name="ElementShortName">spi_sck</obj_property>
+      <obj_property name="ObjectShortName">spi_sck</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_mosi" type="logic">
+      <obj_property name="ElementShortName">spi_mosi</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_miso" type="logic">
+      <obj_property name="ElementShortName">spi_miso</obj_property>
+      <obj_property name="ObjectShortName">spi_miso</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_cs_n" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/order_count_in" type="array">
+      <obj_property name="ElementShortName">order_count_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">order_count_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/bbo_count_in" type="array">
+      <obj_property name="ElementShortName">bbo_count_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">bbo_count_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/latency_p50_in" type="array">
+      <obj_property name="ElementShortName">latency_p50_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">latency_p50_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/symbol_enable_out" type="array">
+      <obj_property name="ElementShortName">symbol_enable_out[7:0]</obj_property>
+      <obj_property name="ObjectShortName">symbol_enable_out[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/threshold_out" type="array">
+      <obj_property name="ElementShortName">threshold_out[31:0]</obj_property>
+      <obj_property name="ObjectShortName">threshold_out[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/debug_state" type="array">
+      <obj_property name="ElementShortName">debug_state[2:0]</obj_property>
+      <obj_property name="ObjectShortName">debug_state[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/uart_debug_tx_data" type="array">
+      <obj_property name="ElementShortName">uart_debug_tx_data[7:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_data[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/uart_debug_tx_start" type="logic">
+      <obj_property name="ElementShortName">uart_debug_tx_start</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_start</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/uart_debug_tx_busy" type="logic">
+      <obj_property name="ElementShortName">uart_debug_tx_busy</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_busy</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/reset" type="logic">
+      <obj_property name="ElementShortName">reset</obj_property>
+      <obj_property name="ObjectShortName">reset</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck" type="logic">
+      <obj_property name="ElementShortName">spi_sck</obj_property>
+      <obj_property name="ObjectShortName">spi_sck</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_mosi" type="logic">
+      <obj_property name="ElementShortName">spi_mosi</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_miso" type="logic">
+      <obj_property name="ElementShortName">spi_miso</obj_property>
+      <obj_property name="ObjectShortName">spi_miso</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_cs_n" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/cmd_byte" type="array">
+      <obj_property name="ElementShortName">cmd_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cmd_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/addr_byte" type="array">
+      <obj_property name="ElementShortName">addr_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">addr_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/data_rd" type="array">
+      <obj_property name="ElementShortName">data_rd[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_rd[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/data_wr" type="array">
+      <obj_property name="ElementShortName">data_wr[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_wr[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/transaction_complete" type="logic">
+      <obj_property name="ElementShortName">transaction_complete</obj_property>
+      <obj_property name="ObjectShortName">transaction_complete</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/is_read" type="logic">
+      <obj_property name="ElementShortName">is_read</obj_property>
+      <obj_property name="ObjectShortName">is_read</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/is_write" type="logic">
+      <obj_property name="ElementShortName">is_write</obj_property>
+      <obj_property name="ObjectShortName">is_write</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_sync1" type="logic">
+      <obj_property name="ElementShortName">spi_sck_sync1</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_sync1</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_sync2" type="logic">
+      <obj_property name="ElementShortName">spi_sck_sync2</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_sync2</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_cs_n_sync1" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n_sync1</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n_sync1</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_cs_n_sync2" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n_sync2</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n_sync2</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_mosi_sync1" type="logic">
+      <obj_property name="ElementShortName">spi_mosi_sync1</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi_sync1</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_mosi_sync2" type="logic">
+      <obj_property name="ElementShortName">spi_mosi_sync2</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi_sync2</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_prev" type="logic">
+      <obj_property name="ElementShortName">spi_sck_prev</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_prev</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_rising" type="logic">
+      <obj_property name="ElementShortName">spi_sck_rising</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_rising</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_falling" type="logic">
+      <obj_property name="ElementShortName">spi_sck_falling</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_falling</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/state" type="other">
+      <obj_property name="ElementShortName">state</obj_property>
+      <obj_property name="ObjectShortName">state</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/cmd_shift" type="array">
+      <obj_property name="ElementShortName">cmd_shift[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cmd_shift[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/addr_shift" type="array">
+      <obj_property name="ElementShortName">addr_shift[7:0]</obj_property>
+      <obj_property name="ObjectShortName">addr_shift[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/data_shift" type="array">
+      <obj_property name="ElementShortName">data_shift[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_shift[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/bit_count" type="other">
+      <obj_property name="ElementShortName">bit_count</obj_property>
+      <obj_property name="ObjectShortName">bit_count</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/cmd_byte_int" type="array">
+      <obj_property name="ElementShortName">cmd_byte_int[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cmd_byte_int[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/CMD_READ" type="array">
+      <obj_property name="ElementShortName">CMD_READ[7:0]</obj_property>
+      <obj_property name="ObjectShortName">CMD_READ[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/CMD_WRITE" type="array">
+      <obj_property name="ElementShortName">CMD_WRITE[7:0]</obj_property>
+      <obj_property name="ObjectShortName">CMD_WRITE[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/reset" type="logic">
+      <obj_property name="ElementShortName">reset</obj_property>
+      <obj_property name="ObjectShortName">reset</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_sck" type="logic">
+      <obj_property name="ElementShortName">spi_sck</obj_property>
+      <obj_property name="ObjectShortName">spi_sck</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_mosi" type="logic">
+      <obj_property name="ElementShortName">spi_mosi</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_miso" type="logic">
+      <obj_property name="ElementShortName">spi_miso</obj_property>
+      <obj_property name="ObjectShortName">spi_miso</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_cs_n" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/order_count_in" type="array">
+      <obj_property name="ElementShortName">order_count_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">order_count_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/bbo_count_in" type="array">
+      <obj_property name="ElementShortName">bbo_count_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">bbo_count_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/latency_p50_in" type="array">
+      <obj_property name="ElementShortName">latency_p50_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">latency_p50_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/symbol_enable_out" type="array">
+      <obj_property name="ElementShortName">symbol_enable_out[7:0]</obj_property>
+      <obj_property name="ObjectShortName">symbol_enable_out[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/threshold_out" type="array">
+      <obj_property name="ElementShortName">threshold_out[31:0]</obj_property>
+      <obj_property name="ObjectShortName">threshold_out[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/debug_state" type="array">
+      <obj_property name="ElementShortName">debug_state[2:0]</obj_property>
+      <obj_property name="ObjectShortName">debug_state[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_tx_data" type="array">
+      <obj_property name="ElementShortName">uart_debug_tx_data[7:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_data[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_tx_start" type="logic">
+      <obj_property name="ElementShortName">uart_debug_tx_start</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_start</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_tx_busy" type="logic">
+      <obj_property name="ElementShortName">uart_debug_tx_busy</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_busy</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/cmd_byte" type="array">
+      <obj_property name="ElementShortName">cmd_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cmd_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/addr_byte" type="array">
+      <obj_property name="ElementShortName">addr_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">addr_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/data_rd" type="array">
+      <obj_property name="ElementShortName">data_rd[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_rd[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/data_wr" type="array">
+      <obj_property name="ElementShortName">data_wr[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_wr[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/transaction_complete" type="logic">
+      <obj_property name="ElementShortName">transaction_complete</obj_property>
+      <obj_property name="ObjectShortName">transaction_complete</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/is_read" type="logic">
+      <obj_property name="ElementShortName">is_read</obj_property>
+      <obj_property name="ObjectShortName">is_read</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/is_write" type="logic">
+      <obj_property name="ElementShortName">is_write</obj_property>
+      <obj_property name="ObjectShortName">is_write</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/registers" type="array">
+      <obj_property name="ElementShortName">registers[0:15][31:0]</obj_property>
+      <obj_property name="ObjectShortName">registers[0:15][31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_state" type="other">
+      <obj_property name="ElementShortName">uart_debug_state</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_state</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_char_index" type="other">
+      <obj_property name="ElementShortName">uart_debug_char_index</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_char_index</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_tx_start_int" type="logic">
+      <obj_property name="ElementShortName">uart_debug_tx_start_int</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_start_int</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_cmd_byte" type="array">
+      <obj_property name="ElementShortName">uart_debug_cmd_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_cmd_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_addr_byte" type="array">
+      <obj_property name="ElementShortName">uart_debug_addr_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_addr_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_data_word" type="array">
+      <obj_property name="ElementShortName">uart_debug_data_word[31:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_data_word[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_trigger" type="logic">
+      <obj_property name="ElementShortName">uart_debug_trigger</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_trigger</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_trigger_prev" type="logic">
+      <obj_property name="ElementShortName">uart_debug_trigger_prev</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_trigger_prev</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/transaction_complete_prev" type="logic">
+      <obj_property name="ElementShortName">transaction_complete_prev</obj_property>
+      <obj_property name="ObjectShortName">transaction_complete_prev</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_ORDER_COUNT" type="other">
+      <obj_property name="ElementShortName">REG_ORDER_COUNT</obj_property>
+      <obj_property name="ObjectShortName">REG_ORDER_COUNT</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_BBO_COUNT" type="other">
+      <obj_property name="ElementShortName">REG_BBO_COUNT</obj_property>
+      <obj_property name="ObjectShortName">REG_BBO_COUNT</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_LATENCY_P50" type="other">
+      <obj_property name="ElementShortName">REG_LATENCY_P50</obj_property>
+      <obj_property name="ObjectShortName">REG_LATENCY_P50</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_STATUS" type="other">
+      <obj_property name="ElementShortName">REG_STATUS</obj_property>
+      <obj_property name="ObjectShortName">REG_STATUS</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_SYMBOL_EN" type="other">
+      <obj_property name="ElementShortName">REG_SYMBOL_EN</obj_property>
+      <obj_property name="ObjectShortName">REG_SYMBOL_EN</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_THRESHOLD" type="other">
+      <obj_property name="ElementShortName">REG_THRESHOLD</obj_property>
+      <obj_property name="ObjectShortName">REG_THRESHOLD</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/reset" type="logic">
+      <obj_property name="ElementShortName">reset</obj_property>
+      <obj_property name="ObjectShortName">reset</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck" type="logic">
+      <obj_property name="ElementShortName">spi_sck</obj_property>
+      <obj_property name="ObjectShortName">spi_sck</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_mosi" type="logic">
+      <obj_property name="ElementShortName">spi_mosi</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_miso" type="logic">
+      <obj_property name="ElementShortName">spi_miso</obj_property>
+      <obj_property name="ObjectShortName">spi_miso</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_cs_n" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/cmd_byte" type="array">
+      <obj_property name="ElementShortName">cmd_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cmd_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/addr_byte" type="array">
+      <obj_property name="ElementShortName">addr_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">addr_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/data_rd" type="array">
+      <obj_property name="ElementShortName">data_rd[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_rd[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/data_wr" type="array">
+      <obj_property name="ElementShortName">data_wr[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_wr[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/transaction_complete" type="logic">
+      <obj_property name="ElementShortName">transaction_complete</obj_property>
+      <obj_property name="ObjectShortName">transaction_complete</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/is_read" type="logic">
+      <obj_property name="ElementShortName">is_read</obj_property>
+      <obj_property name="ObjectShortName">is_read</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/is_write" type="logic">
+      <obj_property name="ElementShortName">is_write</obj_property>
+      <obj_property name="ObjectShortName">is_write</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_sync1" type="logic">
+      <obj_property name="ElementShortName">spi_sck_sync1</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_sync1</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_sync2" type="logic">
+      <obj_property name="ElementShortName">spi_sck_sync2</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_sync2</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_cs_n_sync1" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n_sync1</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n_sync1</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_cs_n_sync2" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n_sync2</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n_sync2</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_mosi_sync1" type="logic">
+      <obj_property name="ElementShortName">spi_mosi_sync1</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi_sync1</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_mosi_sync2" type="logic">
+      <obj_property name="ElementShortName">spi_mosi_sync2</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi_sync2</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_prev" type="logic">
+      <obj_property name="ElementShortName">spi_sck_prev</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_prev</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_rising" type="logic">
+      <obj_property name="ElementShortName">spi_sck_rising</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_rising</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/spi_sck_falling" type="logic">
+      <obj_property name="ElementShortName">spi_sck_falling</obj_property>
+      <obj_property name="ObjectShortName">spi_sck_falling</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/state" type="other">
+      <obj_property name="ElementShortName">state</obj_property>
+      <obj_property name="ObjectShortName">state</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/cmd_shift" type="array">
+      <obj_property name="ElementShortName">cmd_shift[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cmd_shift[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/addr_shift" type="array">
+      <obj_property name="ElementShortName">addr_shift[7:0]</obj_property>
+      <obj_property name="ObjectShortName">addr_shift[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/data_shift" type="array">
+      <obj_property name="ElementShortName">data_shift[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_shift[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/bit_count" type="other">
+      <obj_property name="ElementShortName">bit_count</obj_property>
+      <obj_property name="ObjectShortName">bit_count</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/cmd_byte_int" type="array">
+      <obj_property name="ElementShortName">cmd_byte_int[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cmd_byte_int[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/CMD_READ" type="array">
+      <obj_property name="ElementShortName">CMD_READ[7:0]</obj_property>
+      <obj_property name="ObjectShortName">CMD_READ[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_core_inst/CMD_WRITE" type="array">
+      <obj_property name="ElementShortName">CMD_WRITE[7:0]</obj_property>
+      <obj_property name="ObjectShortName">CMD_WRITE[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/reset" type="logic">
+      <obj_property name="ElementShortName">reset</obj_property>
+      <obj_property name="ObjectShortName">reset</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_sck" type="logic">
+      <obj_property name="ElementShortName">spi_sck</obj_property>
+      <obj_property name="ObjectShortName">spi_sck</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_mosi" type="logic">
+      <obj_property name="ElementShortName">spi_mosi</obj_property>
+      <obj_property name="ObjectShortName">spi_mosi</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_miso" type="logic">
+      <obj_property name="ElementShortName">spi_miso</obj_property>
+      <obj_property name="ObjectShortName">spi_miso</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/spi_cs_n" type="logic">
+      <obj_property name="ElementShortName">spi_cs_n</obj_property>
+      <obj_property name="ObjectShortName">spi_cs_n</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/order_count_in" type="array">
+      <obj_property name="ElementShortName">order_count_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">order_count_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/bbo_count_in" type="array">
+      <obj_property name="ElementShortName">bbo_count_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">bbo_count_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/latency_p50_in" type="array">
+      <obj_property name="ElementShortName">latency_p50_in[31:0]</obj_property>
+      <obj_property name="ObjectShortName">latency_p50_in[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/symbol_enable_out" type="array">
+      <obj_property name="ElementShortName">symbol_enable_out[7:0]</obj_property>
+      <obj_property name="ObjectShortName">symbol_enable_out[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/threshold_out" type="array">
+      <obj_property name="ElementShortName">threshold_out[31:0]</obj_property>
+      <obj_property name="ObjectShortName">threshold_out[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/debug_state" type="array">
+      <obj_property name="ElementShortName">debug_state[2:0]</obj_property>
+      <obj_property name="ObjectShortName">debug_state[2:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_tx_data" type="array">
+      <obj_property name="ElementShortName">uart_debug_tx_data[7:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_data[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_tx_start" type="logic">
+      <obj_property name="ElementShortName">uart_debug_tx_start</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_start</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_tx_busy" type="logic">
+      <obj_property name="ElementShortName">uart_debug_tx_busy</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_busy</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/cmd_byte" type="array">
+      <obj_property name="ElementShortName">cmd_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">cmd_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/addr_byte" type="array">
+      <obj_property name="ElementShortName">addr_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">addr_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/data_rd" type="array">
+      <obj_property name="ElementShortName">data_rd[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_rd[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/data_wr" type="array">
+      <obj_property name="ElementShortName">data_wr[31:0]</obj_property>
+      <obj_property name="ObjectShortName">data_wr[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/transaction_complete" type="logic">
+      <obj_property name="ElementShortName">transaction_complete</obj_property>
+      <obj_property name="ObjectShortName">transaction_complete</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/is_read" type="logic">
+      <obj_property name="ElementShortName">is_read</obj_property>
+      <obj_property name="ObjectShortName">is_read</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/is_write" type="logic">
+      <obj_property name="ElementShortName">is_write</obj_property>
+      <obj_property name="ObjectShortName">is_write</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/registers" type="array">
+      <obj_property name="ElementShortName">registers[0:15][31:0]</obj_property>
+      <obj_property name="ObjectShortName">registers[0:15][31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_state" type="other">
+      <obj_property name="ElementShortName">uart_debug_state</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_state</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_char_index" type="other">
+      <obj_property name="ElementShortName">uart_debug_char_index</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_char_index</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_tx_start_int" type="logic">
+      <obj_property name="ElementShortName">uart_debug_tx_start_int</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_tx_start_int</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_cmd_byte" type="array">
+      <obj_property name="ElementShortName">uart_debug_cmd_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_cmd_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_addr_byte" type="array">
+      <obj_property name="ElementShortName">uart_debug_addr_byte[7:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_addr_byte[7:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_data_word" type="array">
+      <obj_property name="ElementShortName">uart_debug_data_word[31:0]</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_data_word[31:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_trigger" type="logic">
+      <obj_property name="ElementShortName">uart_debug_trigger</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_trigger</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/uart_debug_trigger_prev" type="logic">
+      <obj_property name="ElementShortName">uart_debug_trigger_prev</obj_property>
+      <obj_property name="ObjectShortName">uart_debug_trigger_prev</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/transaction_complete_prev" type="logic">
+      <obj_property name="ElementShortName">transaction_complete_prev</obj_property>
+      <obj_property name="ObjectShortName">transaction_complete_prev</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_ORDER_COUNT" type="other">
+      <obj_property name="ElementShortName">REG_ORDER_COUNT</obj_property>
+      <obj_property name="ObjectShortName">REG_ORDER_COUNT</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_BBO_COUNT" type="other">
+      <obj_property name="ElementShortName">REG_BBO_COUNT</obj_property>
+      <obj_property name="ObjectShortName">REG_BBO_COUNT</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_LATENCY_P50" type="other">
+      <obj_property name="ElementShortName">REG_LATENCY_P50</obj_property>
+      <obj_property name="ObjectShortName">REG_LATENCY_P50</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_STATUS" type="other">
+      <obj_property name="ElementShortName">REG_STATUS</obj_property>
+      <obj_property name="ObjectShortName">REG_STATUS</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_SYMBOL_EN" type="other">
+      <obj_property name="ElementShortName">REG_SYMBOL_EN</obj_property>
+      <obj_property name="ObjectShortName">REG_SYMBOL_EN</obj_property>
+   </wvobject>
+   <wvobject fp_name="/spi_slave_tb/uut/spi_reg_if_inst/REG_THRESHOLD" type="other">
+      <obj_property name="ElementShortName">REG_THRESHOLD</obj_property>
+      <obj_property name="ObjectShortName">REG_THRESHOLD</obj_property>
+   </wvobject>
+</wave_config>

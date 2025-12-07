@@ -386,6 +386,46 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 **Technologies:** C++20, fork/exec, POSIX signals, shared memory (shm_open/shm_unlink), Prometheus, nlohmann/json
 **Status:** Complete - Matches original Project 17 vision (full trading loop + metrics + monitoring)
 
+### Project 19: PY32F030 FPGA Status Display
+**Problem Solved:** External microcontroller-based monitoring and configuration for FPGA trading system
+**Architecture:** Modular SPI slave (spi_slave_core → spi_register_if → application), 6-register bank, clock domain crossing
+**Key Innovation:** Heterogeneous system integration—dedicated ARM Cortex-M0 handles slow UI/monitoring while FPGA focuses on ultra-low-latency processing (< 5 μs wire-to-BBO)
+**Components:**
+  - **spi_slave_core.vhd:** Generic SPI Mode 0 protocol handler (reusable across projects)
+  - **spi_register_if.vhd:** Application-specific register mapping (6 registers: 4 read-only status + 2 read-write config)
+  - **spi_slave.vhd:** Backward compatibility wrapper for integration
+  - **PY32F030 Firmware:** ARM Cortex-M0 SPI master, register read/write functions, UART display
+**Register Bank:**
+  - **Status Inputs (Read-Only):** ORDER_COUNT, BBO_COUNT, LATENCY_P50, STATUS
+  - **Configuration Outputs (Read-Write):** SYMBOL_EN (8-bit symbol filter mask), THRESHOLD (BBO spread threshold)
+**Protocol:**
+  - **Transaction Format:** [CMD_BYTE][ADDR_BYTE][DATA_32BIT]
+  - **Commands:** 0x01=READ, 0x02=WRITE
+  - **Data Format:** 32-bit big-endian (MSB first), matches UDP/IP network byte order
+  - **SPI Mode 0:** CPOL=0, CPHA=0, up to 10 MHz tested
+**Clock Domain Crossing:**
+  - **Challenge:** Variable SPI clock (up to 10 MHz) → 100 MHz FPGA system clock
+  - **Solution:** 2-FF synchronizer chain for MOSI, CS#, SCK + edge detection on synchronized signals
+  - **Validation:** 10,000+ SPI transactions tested, zero errors, no metastability issues
+**Critical Bug Fixes:**
+  - **Pipeline Timing:** Restructured SEND_DATA state into setup phase (bit_count 0→1→2) to wait for 2-cycle register fetch (fixed testbench reading 0x00000000 → 0x00000001)
+  - **Address Byte Trailing Edge:** Added explicit bit_count=2 check to skip premature shift on falling edge after address byte (fixed doubled values 2,4,6,8 → 1,2,3,4)
+**Performance:**
+  - **SPI Transaction:** ~5 μs for 32-bit register read @ 10 MHz
+  - **Stress Test:** 10,000 reads, zero errors detected
+  - **Example Output:** `Orders: 1 | BBO: 2 | Lat: 3 ns | Status: 0x00000004 | Symbol: 0xFF | Threshold: 1000`
+**Architecture Benefits:**
+  - **Resource Optimization:** FPGA LUTs/BRAM dedicated to time-critical paths only
+  - **Dynamic Configuration:** PY32 writes SYMBOL_EN and THRESHOLD via SPI (no FPGA reprogramming)
+  - **Independent Monitoring:** External watchdog can reset FPGA if status registers freeze
+  - **Scalability:** Register bank expandable to 256 registers (8-bit address space)
+**PY32F030 Hardware:**
+  - **MCU:** ARM Cortex-M0 @ 24 MHz (configurable up to 48 MHz)
+  - **Memory:** 64 KB Flash, 8 KB SRAM
+  - **Interface:** SPI master (up to 12 MHz), UART debug via ST-Link V2
+**Technologies:** VHDL (FPGA SPI slave), C (PY32 firmware), SPI Mode 0, 2-FF CDC synchronizers, BRAM-style register bank
+**Status:** Functional - SPI register interface complete and validated with 10k message test
+
 ---
 
 ## Complete System Architecture
@@ -551,6 +591,7 @@ fpga-trading-systems/
 ├── 16-order-execution/                # Trading: Order Execution Engine (FIX 4.2)
 ├── 17-hardware-timestamping/          # Monitoring: SO_TIMESTAMPING + Prometheus
 ├── 18-complete-system/                # Orchestration: System integration + metrics
+├── 19-py32-fpga-status/               # PY32F030 FPGA Status Display
 └── build.cmd                          # Universal build automation (Windows)
 ```
 
@@ -594,7 +635,7 @@ fpga-trading-systems/
 
 ---
 
-**Project Status:** **FUNCTIONAL** - All 18 projects implemented and tested (November 2025)
+**Project Status:** **FUNCTIONAL** - All 19 projects implemented and tested (December 2025)
 **Development Time:** 360+ hours
 **System Status:** Fully integrated and operational with NASDAQ ITCH feed (historic data file simulating live feed)
 
@@ -633,5 +674,5 @@ fpga-trading-systems/
 
 ---
 
-**Last Updated:** November 2025
+**Last Updated:** December 2025
 **Status:** Complete and tested on Xilinx Arty A7-100T hardware

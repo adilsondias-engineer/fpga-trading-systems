@@ -264,8 +264,8 @@ begin
 
                             -- DO NOT clear field registers here - they must remain stable for CDC
                             -- Registers will be overwritten with new data during COUNT_BYTES
-                            -- This ensures data remains stable for 3-4 cycles after valid pulse
-                            -- allowing the 100 MHz CDC synchronizer to sample correctly
+                            -- Data remains stable for 3-4 cycles after valid pulse
+                            -- allowing 100 MHz CDC synchronizer to sample correctly
 
                             -- Check if valid message type
                             if get_msg_length(udp_payload_data) = 0 then

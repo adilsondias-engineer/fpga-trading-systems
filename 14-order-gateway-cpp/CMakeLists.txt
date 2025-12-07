@@ -37,6 +37,9 @@ include_directories(${CMAKE_SOURCE_DIR}/../common)
 # Option to enable XDP support
 option(USE_XDP "Enable AF_XDP support for kernel bypass" OFF)
 
+# Option to enable DPDK support
+option(USE_DPDK "Enable DPDK support for userspace kernel bypass" OFF)
+
 # Source files
 set(SOURCES
     src/main.cpp
@@ -76,8 +79,104 @@ else()
     message(STATUS "XDP support disabled (use -DUSE_XDP=ON to enable)")
 endif()
 
+# Add DPDK listener source if enabled
+if(USE_DPDK)
+    list(APPEND SOURCES src/dpdk_listener.cpp)
+    message(STATUS "DPDK support enabled")
+    
+    # Find DPDK using pkg-config (preferred method)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(DPDK QUIET libdpdk)
+    endif()
+    
+    # Alternative: Find DPDK by DPDK_ROOT environment variable or CMake variable
+    if(NOT DPDK_FOUND)
+        if(DEFINED ENV{DPDK_ROOT})
+            set(DPDK_ROOT $ENV{DPDK_ROOT})
+        endif()
+        
+        if(DPDK_ROOT)
+            set(DPDK_INCLUDE_DIR "${DPDK_ROOT}/include")
+            set(DPDK_LIB_DIR "${DPDK_ROOT}/lib")
+            
+            # Find DPDK libraries (common ones)
+            find_library(DPDK_RTE_EAL NAMES rte_eal PATHS ${DPDK_LIB_DIR})
+            find_library(DPDK_RTE_ETHDEV NAMES rte_ethdev PATHS ${DPDK_LIB_DIR})
+            find_library(DPDK_RTE_MBUF NAMES rte_mbuf PATHS ${DPDK_LIB_DIR})
+            find_library(DPDK_RTE_MEMPOOL NAMES rte_mempool PATHS ${DPDK_LIB_DIR})
+            find_library(DPDK_RTE_NET NAMES rte_net PATHS ${DPDK_LIB_DIR})
+            
+            if(DPDK_RTE_EAL AND DPDK_RTE_ETHDEV AND DPDK_RTE_MBUF)
+                set(DPDK_FOUND TRUE)
+                set(DPDK_INCLUDE_DIRS ${DPDK_INCLUDE_DIR})
+                set(DPDK_LIBRARIES 
+                    ${DPDK_RTE_EAL}
+                    ${DPDK_RTE_ETHDEV}
+                    ${DPDK_RTE_MBUF}
+                    ${DPDK_RTE_MEMPOOL}
+                    ${DPDK_RTE_NET}
+                )
+                message(STATUS "DPDK found via DPDK_ROOT: ${DPDK_ROOT}")
+            endif()
+        endif()
+    endif()
+    
+    # System-wide DPDK installation (try common paths)
+    if(NOT DPDK_FOUND)
+        find_path(DPDK_INCLUDE_DIR rte_eal.h
+            PATHS
+                /usr/include/dpdk
+                /usr/local/include/dpdk
+                /opt/dpdk/include
+        )
+        
+        if(DPDK_INCLUDE_DIR)
+            # Try to find libraries in common locations
+            find_library(DPDK_RTE_EAL NAMES rte_eal
+                PATHS
+                    /usr/lib/x86_64-linux-gnu
+                    /usr/lib64
+                    /usr/local/lib
+                    /opt/dpdk/lib
+            )
+            
+            if(DPDK_RTE_EAL)
+                set(DPDK_FOUND TRUE)
+                set(DPDK_INCLUDE_DIRS ${DPDK_INCLUDE_DIR})
+                # DPDK libraries are typically linked via pkg-config, but try to find them
+                message(STATUS "DPDK found in system paths: ${DPDK_INCLUDE_DIR}")
+                message(STATUS "DPDK library: ${DPDK_RTE_EAL}")
+                message(WARNING "DPDK system installation detected. Ensure all DPDK libraries are available.")
+                message(WARNING "Recommended: Install DPDK via package manager or set DPDK_ROOT")
+            endif()
+        endif()
+    endif()
+    
+    if(DPDK_FOUND)
+        message(STATUS "DPDK include dirs: ${DPDK_INCLUDE_DIRS}")
+        message(STATUS "DPDK libraries: ${DPDK_LIBRARIES}")
+        target_include_directories(order_gateway PRIVATE ${DPDK_INCLUDE_DIRS})
+        target_compile_definitions(order_gateway PRIVATE USE_DPDK)
+        set(HAVE_DPDK TRUE)
+    else()
+        message(WARNING "DPDK not found!")
+        message(WARNING "Install DPDK:")
+        message(WARNING "  1. Download from: https://www.dpdk.org/downloads/")
+        message(WARNING "  2. Build: meson build && ninja -C build")
+        message(WARNING "  3. Install: sudo ninja -C build install")
+        message(WARNING "  4. Or set DPDK_ROOT environment variable to DPDK installation path")
+        set(HAVE_DPDK FALSE)
+    endif()
+else()
+    message(STATUS "DPDK support disabled (use -DUSE_DPDK=ON to enable)")
+endif()
+
 # Executable
 add_executable(order_gateway ${SOURCES})
+
+# Note: DPDK libraries must be linked after executable is created
+# This is done below in the DPDK configuration section
 
 # Link Paho MQTT C library (synchronous client)
 target_link_libraries(order_gateway PRIVATE eclipse-paho-mqtt-c::paho-mqtt3a-static eclipse-paho-mqtt-c::paho-mqtt3c-static eclipse-paho-mqtt-c::paho-mqtt3as-static eclipse-paho-mqtt-c::paho-mqtt3cs-static)
@@ -89,6 +188,29 @@ target_link_libraries(order_gateway PRIVATE RdKafka::rdkafka++)
 # Link pthread library (required for RT scheduling and CPU pinning)
 find_package(Threads REQUIRED)
 target_link_libraries(order_gateway PRIVATE Threads::Threads)
+
+# Link DPDK libraries if enabled
+if(USE_DPDK AND HAVE_DPDK)
+    if(DPDK_LIBRARIES)
+        target_link_libraries(order_gateway PRIVATE ${DPDK_LIBRARIES})
+    elseif(DPDK_LDFLAGS)
+        # If pkg-config was used, link via flags
+        target_link_options(order_gateway PRIVATE ${DPDK_LDFLAGS})
+    else()
+        # Try to link common DPDK libraries
+        target_link_libraries(order_gateway PRIVATE
+            rte_eal
+            rte_ethdev
+            rte_mbuf
+            rte_mempool
+            rte_net
+            rte_ether
+            rte_ip
+            rte_udp
+        )
+    endif()
+    message(STATUS "DPDK libraries linked")
+endif()
 
 # Link spdlog for logging
 target_link_libraries(order_gateway PRIVATE spdlog::spdlog)

@@ -114,22 +114,86 @@ Benefits: Clear structure, easy to extend, self-documenting
 4. New errors restart timer
 **Lesson:** Makes transient hardware events visible to operators
 
+**14. SPI Protocol Implementation - Pipeline Timing (Project 19)**
+```vhdl
+-- Problem: Sequential register access creates 2-cycle delay
+-- addr_byte updated → reg_addr calculated → register read → data_rd valid
+
+when SEND_DATA =>
+    if bit_count = 0 then
+        -- Cycle 0: Wait for addr_byte propagation
+        bit_count <= 1;
+    elsif bit_count = 1 then
+        -- Cycle 1: data_rd now valid, load shift register
+        data_shift <= data_rd;
+        bit_count <= 2;
+    elsif bit_count >= 2 then
+        -- Shift phase begins
+```
+**Symptom:** Testbench reading 0x00000000 instead of 0x00000001 from register 0x00
+**Root Cause:** `data_rd` not ready when `data_shift` loaded (2-cycle register fetch pipeline)
+**Solution:** Restructure SEND_DATA state into setup phase (bit_count 0→1→2) before shift phase
+**Lesson:** When crossing abstraction boundaries (protocol ↔ memory), account for pipeline delays explicitly in state machine
+
+**15. SPI Address Byte Trailing Edge (Project 19)**
+```vhdl
+-- Problem: SPI Mode 0 falling edge immediately after address byte causes premature shift
+
+elsif bit_count = 2 then
+    if spi_sck_falling = '1' then
+        -- Skip address byte's trailing falling edge
+        bit_count <= 3;
+    end if;
+elsif bit_count >= 3 then
+    if spi_sck_falling = '1' then
+        -- Now shift data on falling edge (MSB first)
+        data_shift <= data_shift(30 downto 0) & '0';
+```
+**Symptom:** PY32 reading doubled values (2,4,6,8) instead of correct sequence (1,2,3,4)
+**Root Cause:** Responding to falling edge immediately after address byte shifts MSB prematurely
+**Solution:** Add explicit bit_count=2 check to skip first falling edge after address byte
+**Lesson:** SPI protocol timing is subtle—transitions between command/address/data phases need explicit edge skipping
+
+**16. Modular SPI Architecture (Project 19)**
+```
+spi_slave_core.vhd       ← Generic SPI Mode 0 protocol (reusable)
+    ↓
+spi_register_if.vhd      ← Application-specific register mapping
+    ↓
+spi_slave.vhd            ← Backward compatibility wrapper
+```
+**Design Decision:** Three-layer architecture instead of monolithic SPI slave
+**Benefits:**
+- **Reusability:** spi_slave_core works with any register map (6 registers today, 256 registers tomorrow)
+- **Testability:** Each layer tested independently (protocol, register mapping, integration)
+- **Maintainability:** Register changes don't require touching low-level SPI protocol logic
+**Trade-off:** Slightly more complex hierarchy, but 10× easier to debug and extend
+**Lesson:** Layered architecture investment pays off immediately when debugging complex timing issues
+
+**17. Big-Endian vs Little-Endian for SPI (Project 19)**
+**Decision:** Transmit 32-bit data MSB first (big-endian) over SPI
+**Rationale:**
+- **Network standard:** Matches UDP/IP network byte order (Project 13)
+- **Consistency:** Same byte order across UART debug (Project 8) and UDP BBO (Project 13)
+- **Implementation:** FPGA shifts left (MSB out), PY32 receives MSB first and reconstructs
+**Lesson:** Choose byte order based on system integration, not individual module convenience
+
 ### Development Workflow
 
-**14. Documentation First**
+**18. Documentation First**
 - **Mistake:** Coded RGMII interface without reading docs (wasted 4 hours)
 - **Correct:** 30 min reading Arty A7 manual → found MII interface
 - **Savings:** 3.5 hours
 - **Lesson:** Read hardware docs before coding
 
-**15. Incremental Integration**
+**19. Incremental Integration**
 - Phase 1A: MII + MAC → Verify
 - Phase 1D: + IP → Verify
 - Phase 1F: + UDP → Verify
 - **Anti-pattern:** Build entire stack, debug all layers at once
 - **Lesson:** Verify each layer before adding next
 
-**16. Component Interface Management**
+**20. Component Interface Management**
 - **Solutions:**
   - Direct entity instantiation (recommended - single source of truth)
   - Auto-generate component from entity
@@ -138,7 +202,7 @@ Benefits: Clear structure, easy to extend, self-documenting
 
 ### Software Performance Optimization
 
-**17. Real-Time Scheduling vs Multi-Core Isolation (Project 14)**
+**21. Real-Time Scheduling vs Multi-Core Isolation (Project 14)**
 - **Experiment:** Compared SCHED_FIFO RT scheduling vs CFS with CPU isolation
 - **Hardware:** AMD Ryzen AI 9 365 (10 cores, 20 threads)
 - **Workload:** ~400 UDP BBO messages/sec
@@ -152,7 +216,7 @@ Benefits: Clear structure, easy to extend, self-documenting
   ```
 - **Lesson:** RT scheduling isn't always optimal. Multi-core isolation with CFS can provide better performance for workloads with moderate variability. Profile both approaches.
 
-**18. Database Query Optimization - Cursor Selection**
+**22. Database Query Optimization - Cursor Selection**
 - **Problem:** Python script processing MySQL data at 40 msg/sec (expected 400 msg/sec), using only 1% CPU
 - **Root Cause:** Server-side cursor (SSCursor) fetching rows one-by-one → 8,000+ network round-trips
 - **Solution:**
@@ -162,7 +226,7 @@ Benefits: Clear structure, easy to extend, self-documenting
 - **Expected Result:** 10× speedup (40 → 400 msg/sec)
 - **Lesson:** Network-bound operations disguise as low CPU usage. Client-side cursors for bulk queries, server-side only for streaming large result sets.
 
-**19. Binary Protocols vs ASCII/Hex (Projects 9 vs 14)**
+**23. Binary Protocols vs ASCII/Hex (Projects 9 vs 14)**
 - **ASCII/Hex (Project 9 UART):** 10.67 µs avg parse latency, hex-to-decimal conversion overhead
 - **Binary (Project 14 UDP):** 2.09 µs avg parse latency (5.1× faster)
 - **Additional Benefits:**
@@ -171,7 +235,7 @@ Benefits: Clear structure, easy to extend, self-documenting
   - Deterministic parsing time
 - **Lesson:** Binary protocols critical for low-latency systems. ASCII/hex suitable for debugging, not production.
 
-**20. Interface Selection Impact (UART vs UDP)**
+**24. Interface Selection Impact (UART vs UDP)**
 - **UART @ 115200 baud (Project 9):**
   - Throughput: ~96 BBO msg/sec
   - Latency: 10.67 µs avg (gateway parsing)
@@ -183,7 +247,7 @@ Benefits: Clear structure, easy to extend, self-documenting
 - **Improvement:** 53× parsing, 21× E2E latency reduction
 - **Lesson:** Interface choice dominates system performance. UART acceptable for debugging, UDP/Ethernet essential for production trading systems.
 
-**21. Scapy Performance on Linux (Testing Tools)**
+**25. Scapy Performance on Linux (Testing Tools)**
 - **Problem:** Scapy's `sendp()` for raw Ethernet frames extremely slow on Linux (~100-200 pkt/sec)
 - **Root Cause:** Raw socket overhead, kernel path for Layer 2 sending
 - **Solution:** Use native UDP sockets instead
@@ -197,7 +261,7 @@ Benefits: Clear structure, easy to extend, self-documenting
 - **Impact:** 100× throughput improvement for test scripts
 - **Lesson:** Scapy excellent for packet inspection/analysis, but use native sockets for high-throughput testing.
 
-**22. Mock Test Data Generators (Testing Without Hardware)**
+**26. Mock Test Data Generators (Testing Without Hardware)**
 - **Challenge:** Testing Project 14 (UDP gateway) requires FPGA sending BBO packets
 - **Solution:** Created `mock_bbo_sender.py` to simulate FPGA UDP output
   - Sends 256-byte binary BBO packets matching Project 13 format

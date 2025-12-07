@@ -41,3 +41,6 @@ dfx_runtime.txt
 /17-hardware-timestamping/build
 /18-complete-system/build
 /16-order-execution/build
+/16-order-execution/vcpkg_installed
+/build/CMakeFiles
+/build/.cmake

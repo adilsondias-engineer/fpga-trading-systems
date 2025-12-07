@@ -49,7 +49,13 @@ entity mii_eth_top is
 
         -- UART
         uart_txd_in : in STD_LOGIC;              -- RX: PC -> FPGA (confusing naming!)
-        uart_rxd_out : out STD_LOGIC             -- TX: FPGA -> PC
+        uart_rxd_out : out STD_LOGIC;            -- TX: FPGA -> PC
+        
+        -- SPI Slave Interface (PY32F030)
+        spi_sck  : in  STD_LOGIC;   -- SPI clock from PY32
+        spi_mosi : in  STD_LOGIC;   -- Master Out Slave In
+        spi_miso : out STD_LOGIC;   -- Master In Slave Out
+        spi_cs_n : in  STD_LOGIC    -- Chip select (active low)
     );
 end mii_eth_top;
 
@@ -330,9 +336,15 @@ architecture structural of mii_eth_top is
     signal itch_uart_tx_ready : std_logic;  -- Inverse of tx_busy
     signal itch_send_stats    : std_logic := '0';
     
-    -- UART multiplexer signals (select between ITCH, debug, and BBO formatters)
+    -- UART multiplexer signals (select between ITCH, debug, BBO formatters, config STATUS, and SPI debug)
     signal uart_tx_data_sel  : std_logic_vector(7 downto 0);
     signal uart_tx_valid_sel : std_logic;
+    signal uart_config_tx_data  : std_logic_vector(7 downto 0);
+    signal uart_config_tx_start : std_logic;
+    signal uart_config_tx_busy  : std_logic;
+    signal spi_debug_tx_data  : std_logic_vector(7 downto 0) := (others => '0');
+    signal spi_debug_tx_start : std_logic := '0';
+    signal spi_debug_tx_busy  : std_logic := '0';
 
     -- BBO formatter signals
     signal bbo_uart_tx_data  : std_logic_vector(7 downto 0);
@@ -347,6 +359,22 @@ architecture structural of mii_eth_top is
     signal ob_bbo_sync         : bbo_t;
     signal ob_bbo_symbol_sync  : std_logic_vector(63 downto 0);  -- Symbol CDC
     signal ob_stats_sync       : order_book_stats_t;
+    
+    -- Status tracking for SPI/UART (100 MHz domain)
+    signal order_count_reg : unsigned(31 downto 0) := (others => '0');
+    signal bbo_count_reg : unsigned(31 downto 0) := (others => '0');
+    -- Latency is a static placeholder (not measured yet)
+    -- Real latency measurement requires timestamp capture at packet arrival and BBO output
+    -- For now, keep as constant placeholder value
+    signal latency_p50_reg : unsigned(31 downto 0) := to_unsigned(170, 32);  -- 170 ns placeholder (static, not incremented)
+    signal order_count_status : std_logic_vector(31 downto 0);
+    signal bbo_count_status   : std_logic_vector(31 downto 0);
+    signal latency_p50_status : std_logic_vector(31 downto 0);
+    
+    -- ITCH message valid synchronizer (25 MHz -> 100 MHz) for order count
+    signal itch_msg_valid_sync1 : std_logic := '0';
+    signal itch_msg_valid_sync2 : std_logic := '0';
+    signal itch_msg_valid_sync3 : std_logic := '0';
 
     -- ITCH stats counter signals
     signal itch_add_count     : unsigned(31 downto 0) := (others => '0');
@@ -438,6 +466,10 @@ architecture structural of mii_eth_top is
     signal cfg_dst_port : std_logic_vector(15 downto 0);
     signal cfg_updated  : std_logic;
 
+        -- Shared configuration registers (from UART or SPI)
+    signal threshold_config     : std_logic_vector(31 downto 0);
+    signal symbol_enable_config : std_logic_vector(7 downto 0);
+
 begin
 
     -- =========================================================================
@@ -468,7 +500,9 @@ begin
             rx_valid => uart_rx_valid
         );
 
-    -- Instantiate UART configuration module
+
+    
+    -- Instantiate UART configuration module (Extended for Project 21)
     uart_config_inst : entity work.uart_config
         generic map (
             DEFAULT_IP   => x"C0A8005D",        -- 192.168.0.93
@@ -483,16 +517,45 @@ begin
             dst_ip   => cfg_dst_ip,
             dst_mac  => cfg_dst_mac,
             dst_port => cfg_dst_port,
+            threshold_out     => threshold_config,
+            symbol_enable_out => symbol_enable_config,
+            order_count_in  => order_count_status,
+            bbo_count_in    => bbo_count_status,
+            latency_p50_in  => latency_p50_status,
+            uart_tx_data  => uart_config_tx_data,
+            uart_tx_start => uart_config_tx_start,
+            uart_tx_busy  => uart_config_tx_busy,
             config_updated => cfg_updated
+        );
+    
+    -- Instantiate SPI Slave (PY32F030 interface)
+    spi_slave_inst : entity work.spi_slave
+        port map (
+            clk                 => clk,
+            reset               => reset,
+            spi_sck             => spi_sck,
+            spi_mosi            => spi_mosi,
+            spi_miso            => spi_miso,
+            spi_cs_n            => spi_cs_n,
+            order_count_in      => order_count_status,
+            bbo_count_in        => bbo_count_status,
+            latency_p50_in      => latency_p50_status,
+            symbol_enable_out   => open,  -- Use UART version (priority)
+            threshold_out       => open,  -- Use UART version (priority)
+            debug_state         => open,
+            uart_debug_tx_data  => spi_debug_tx_data,
+            uart_debug_tx_start => spi_debug_tx_start,
+            uart_debug_tx_busy  => spi_debug_tx_busy
         );
 
     -- =========================================================================
-    -- UART Multiplexer: Switch between BBO, Debug, and ITCH formatters
+    -- UART Multiplexer: Switch between BBO, Debug, ITCH formatters, Config STATUS, and SPI Debug
     -- =========================================================================
+    -- Priority: STATUS response > debug_mode selection
     -- debug_mode = "00": BBO formatter (default for Project 9 gateway)
     -- debug_mode = "01": Debug formatter (MAC/IP/UDP frame info)
     -- debug_mode = "10": ITCH formatter (for ITCH message debugging)
-    -- debug_mode = "11": Reserved for future use
+    -- debug_mode = "11": SPI debug formatter (TEMPORARY - for debugging SPI issues)
     -- =========================================================================
     process(clk)
     begin
@@ -501,8 +564,12 @@ begin
                 uart_tx_data_sel <= (others => '0');
                 uart_tx_valid_sel <= '0';
             else
-                -- Select formatter based on debug_mode
-                if debug_mode = "01" then
+                -- Priority: STATUS response (from uart_config) has highest priority
+                if uart_config_tx_start = '1' then
+                    -- STATUS response is being sent
+                    uart_tx_data_sel <= uart_config_tx_data;
+                    uart_tx_valid_sel <= uart_config_tx_start;
+                elsif debug_mode = "01" then
                     -- Debug mode 1: Use debug formatter (MAC/IP/UDP info)
                     uart_tx_data_sel <= uart_fmt_tx_data;
                     uart_tx_valid_sel <= uart_fmt_tx_start;
@@ -510,8 +577,12 @@ begin
                     -- Debug mode 2: Use ITCH formatter (ITCH message debugging)
                     uart_tx_data_sel <= itch_uart_tx_data;
                     uart_tx_valid_sel <= itch_uart_tx_valid;
+                elsif debug_mode = "11" then
+                    -- Debug mode 3: Use SPI debug formatter (TEMPORARY)
+                    uart_tx_data_sel <= spi_debug_tx_data;
+                    uart_tx_valid_sel <= spi_debug_tx_start;
                 else
-                    -- Default mode "00" and "11": Use BBO formatter
+                    -- Default mode "00": Use BBO formatter
                     uart_tx_data_sel <= bbo_uart_tx_data;
                     uart_tx_valid_sel <= bbo_uart_tx_valid;
                 end if;
@@ -519,6 +590,10 @@ begin
             end if;
         end if;
     end process;
+    
+    -- Wire UART TX busy signal back to uart_config and SPI debug
+    uart_config_tx_busy <= uart_fmt_tx_busy;
+    spi_debug_tx_busy <= uart_fmt_tx_busy;
 
     -- UART message formatter
     uart_fmt_inst: entity work.uart_formatter
@@ -1214,6 +1289,13 @@ begin
                     delete_count => (others => '0'),
                     replace_count => (others => '0')
                 );
+                -- Initialize status counters
+                order_count_reg <= (others => '0');
+                bbo_count_reg <= (others => '0');
+                latency_p50_reg <= to_unsigned(170, 32);  -- 170 ns placeholder
+                itch_msg_valid_sync1 <= '0';
+                itch_msg_valid_sync2 <= '0';
+                itch_msg_valid_sync3 <= '0';
             else
                 -- Two-stage synchronizer for bbo_update strobe (for edge detection)
                 ob_bbo_update_sync1 <= ob_bbo_update;
@@ -1237,6 +1319,26 @@ begin
                 -- Symbol is stable during bbo_update pulse, safe to sample
                 ob_bbo_symbol_sync <= ob_bbo_symbol;
                 ob_stats_sync <= ob_stats;
+                
+                -- Synchronize ITCH message valid for order count (edge detection)
+                itch_msg_valid_sync1 <= itch_msg_valid;
+                itch_msg_valid_sync2 <= itch_msg_valid_sync1;
+                itch_msg_valid_sync3 <= itch_msg_valid_sync2;
+                
+                -- Increment order count on rising edge of itch_msg_valid
+                if itch_msg_valid_sync2 = '1' and itch_msg_valid_sync3 = '0' then
+                    order_count_reg <= order_count_reg + 1;
+                end if;
+                
+                -- Increment BBO count on rising edge of ob_bbo_update_sync2
+                if ob_bbo_update_sync2 = '1' and ob_bbo_update_sync1 = '0' then
+                    bbo_count_reg <= bbo_count_reg + 1;
+                end if;
+                
+                -- Update status outputs (convert to std_logic_vector)
+                order_count_status <= std_logic_vector(order_count_reg);
+                bbo_count_status <= std_logic_vector(bbo_count_reg);
+                latency_p50_status <= std_logic_vector(latency_p50_reg);
             end if;
         end if;
     end process;
