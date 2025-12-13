@@ -2,8 +2,8 @@
 ![Language](https://img.shields.io/badge/Language-VHDL-blue)
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
-![Projects](https://img.shields.io/badge/Projects-18%20Complete-brightgreen)
-![Development Time](https://img.shields.io/badge/Development%20Time-360%2B%20hours-blue)
+![Projects](https://img.shields.io/badge/Projects-19%20Complete-brightgreen)
+![Development Time](https://img.shields.io/badge/Development%20Time-400%2B%20hours-blue)
 
 # FPGA Trading Systems
 
