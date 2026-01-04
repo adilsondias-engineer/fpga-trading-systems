@@ -60,8 +60,9 @@ class LiveFeedSimulator:
     FPGA_MESSAGE_TYPES = ['A', 'E', 'X', 'S', 'R', 'D', 'U', 'P', 'Q']
 
     # Network configuration (matching send_itch_packets.py)
-    PC_INTERFACE_MAC = "E8-9C-25-7A-5E-0A"
+    PC_INTERFACE_MAC = "80-3F-5D-FB-17-63" #"60-FF-9E-D1-70-EC"
     FPGA_MAC = "ff:ff:ff:ff:ff:ff"  # Broadcast
+
 
     def __init__(self, db_host, db_user, db_password, db_name, fpga_ip, fpga_port=1234):
         """Initialize database connection and network interface"""
@@ -187,8 +188,8 @@ class LiveFeedSimulator:
                 if sleep_sec > 0:
                     time.sleep(sleep_sec)
 
-            # Send message to FPGA
-            self._send_message(raw_message, symbol)
+            # Send message to FPGA (pass msg_type for validation)
+            self._send_message(raw_message, symbol, msg_type)
 
             # Update statistics
             self.stats['total_sent'] += 1
@@ -259,35 +260,153 @@ class LiveFeedSimulator:
         heap = []
         for row in self.cursor:
             timestamp_ns, symbol, msg_type, raw_message = row
+            
+            # Ensure raw_message is bytes (PyMySQL BLOB should return bytes)
+            if isinstance(raw_message, str):
+                # If it's a string, encode as latin-1 (preserves byte values)
+                raw_message = raw_message.encode('latin-1')
+            elif not isinstance(raw_message, (bytes, bytearray)):
+                print(f"WARNING: Unexpected raw_message type {type(raw_message)} for message type {msg_type}")
+                continue
+            
+            # Validate message type matches first byte
+            if len(raw_message) > 0 and chr(raw_message[0]) != msg_type:
+                print(f"WARNING: Message type mismatch: DB says '{msg_type}' but first byte is '{chr(raw_message[0])}'")
+            
             heapq.heappush(heap, (timestamp_ns, symbol, msg_type, raw_message))
 
         return heap
 
-    def _send_message(self, raw_message, symbol):
-        """Send ITCH message to FPGA via UDP"""
+    def _send_message(self, raw_message, symbol, expected_msg_type=None):
+        """Send ITCH message to FPGA via UDP
+        
+        Args:
+            raw_message: Raw message bytes from database
+            symbol: Stock symbol (for reference)
+            expected_msg_type: Expected message type from database (for validation)
+        """
         try:
-            # Ensure uppercase symbol in payload (critical for FPGA filtering!)
-            payload = bytearray(raw_message)
+            # raw_message should already be bytes from database (validated in _load_messages_heap)
+            # But handle edge cases for safety
+            if isinstance(raw_message, str):
+                # If it's a string, encode as latin-1 (preserves byte values 0-255)
+                payload = raw_message.encode('latin-1')
+            elif isinstance(raw_message, (bytes, bytearray)):
+                payload = bytes(raw_message)
+            else:
+                raise ValueError(f"Unexpected raw_message type: {type(raw_message)}")
 
-            # Convert symbol bytes to uppercase (offset 24-31 for most messages)
-            msg_type = payload[0]
-            if msg_type in [ord('A'), ord('E'), ord('X'), ord('D'), ord('U'), ord('P'), ord('Q')]:
-                for i in range(24, min(32, len(payload))):
-                    if ord('a') <= payload[i] <= ord('z'):
-                        payload[i] = payload[i] - 32  # To uppercase
-
-            payload = bytes(payload)
-
+            # Validate payload
+            if len(payload) == 0:
+                raise ValueError("Empty payload")
+            
+            # Check if payload might have 2-byte length prefix
+            # Valid ITCH message types are ASCII characters
+            first_byte = payload[0]
+            actual_msg_type = chr(first_byte) if 32 <= first_byte <= 126 else None
+            
+            # If first byte is not a valid message type, check if it might be length prefix
+            valid_msg_types = ['S', 'R', 'H', 'Y', 'L', 'V', 'W', 'K', 'J', 'h',
+                             'A', 'F', 'E', 'C', 'X', 'D', 'U', 'P', 'Q', 'B', 'I']
+            
+            if actual_msg_type not in valid_msg_types and len(payload) >= 2:
+                # First byte is not a valid message type - might be length prefix
+                possible_length = (payload[0] << 8) | payload[1]
+                # Check if it looks like a length prefix (reasonable ITCH message length: 12-50 bytes)
+                if 12 <= possible_length <= 50 and len(payload) == possible_length + 2:
+                    # Likely has length prefix, strip it
+                    payload = payload[2:]
+                    if len(payload) == 0:
+                        raise ValueError("Payload became empty after stripping length prefix")
+                    # Re-check message type after stripping
+                    first_byte = payload[0]
+                    actual_msg_type = chr(first_byte) if 32 <= first_byte <= 126 else None
+            
+            # Validate message type
+            if actual_msg_type not in valid_msg_types:
+                raise ValueError(f"Invalid message type: first byte 0x{first_byte:02x} ('{actual_msg_type}')")
+            
+            # Validate message type matches database record (if provided)
+            if expected_msg_type and actual_msg_type != expected_msg_type:
+                # This is a data integrity issue - log but continue
+                if self.stats['errors'] < 5:  # Only log first few
+                    print(f"\nWARNING: Message type mismatch - DB says '{expected_msg_type}' but payload is '{actual_msg_type}'")
+                self.stats['errors'] += 1
+            
+            # Remove trailing null bytes (safety measure - should not be needed if importer fixed)
+            # ITCH messages have fixed formats and should never have trailing zeros
+            original_len = len(payload)
+            payload = payload.rstrip(b'\x00')
+            stripped_bytes = original_len - len(payload)
+            
+            if stripped_bytes > 0:
+                # Log if we stripped trailing zeros (indicates database has padding - should be fixed in importer)
+                # Only log occasionally to avoid spam (every 1000th occurrence)
+                if self.stats['total_sent'] % 1000 == 0:
+                    print(f"\nNOTE: Stripped {stripped_bytes} trailing zero(s) from message "
+                          f"(DB may have padding - consider re-importing with fixed importer)")
+            
+            # Re-validate length after stripping (should still be valid)
+            if len(payload) == 0:
+                raise ValueError("Payload became empty after stripping trailing zeros")
+            
+            # Re-check message type after stripping (first byte should still be valid)
+            if payload[0] < 32 or payload[0] > 126:
+                raise ValueError(f"Invalid message type after stripping: 0x{payload[0]:02x}")
+            
+            # Validate message length matches expected ITCH message type length
+            # This helps catch corrupted messages
+            msg_type_byte = payload[0]
+            expected_lengths = {
+                ord('S'): 12,   # System Event
+                ord('R'): 39,   # Stock Directory
+                ord('A'): 36,   # Add Order (no MPID)
+                ord('F'): 40,   # Add Order (with MPID)
+                ord('E'): 31,   # Order Executed
+                ord('C'): 36,   # Order Executed with Price
+                ord('X'): 23,   # Order Cancel
+                ord('D'): 19,   # Order Delete
+                ord('U'): 35,   # Order Replace
+                ord('P'): 44,   # Trade (non-cross)
+                ord('Q'): 40,   # Cross Trade
+            }
+            
+            if msg_type_byte in expected_lengths:
+                expected_len = expected_lengths[msg_type_byte]
+                if len(payload) != expected_len:
+                    # Log length mismatch (might indicate database corruption)
+                    if self.stats['errors'] < 10:
+                        print(f"\nWARNING: Message type '{chr(msg_type_byte)}' has length {len(payload)}, expected {expected_len}")
+                    self.stats['errors'] += 1
+            
+            # Symbol uppercasing is disabled (data already uppercase in database)
+            # Uncomment below if needed:
+            # msg_type = payload[0]
+            # if msg_type in [ord('A'), ord('U'), ord('P'), ord('Q')]:
+            #     if len(payload) >= 32:
+            #         payload = bytearray(payload)
+            #         for i in range(24, 32):
+            #             if ord('a') <= payload[i] <= ord('z'):
+            #                 payload[i] = payload[i] - 32
+            #         payload = bytes(payload)
+            
             # Build Ethernet/IP/UDP packet
+            # Explicitly set UDP length to match actual payload size (after stripping zeros)
+            # UDP length = UDP header (8 bytes) + payload length
+            udp_length = 8 + len(payload)
+            
             packet = (
                 Ether(dst=self.FPGA_MAC) /
                 IP(dst=self.fpga_ip) /
-                UDP(sport=54321, dport=self.fpga_port) /
+                UDP(sport=54321, dport=self.fpga_port, len=udp_length) /
                 Raw(load=payload)
             )
-
+            
+            # Scapy will automatically calculate IP and UDP checksums
+            # Note: Ethernet frame padding (to reach 64-byte minimum) is added automatically by the network driver
+            # This padding is NOT part of the UDP payload and is normal behavior
             sendp(packet, iface=self.iface, verbose=False)
-
+            print(f"Payload: {payload.hex()}")
         except Exception as e:
             self.stats['errors'] += 1
             if self.stats['errors'] < 10:  # Only print first 10 errors

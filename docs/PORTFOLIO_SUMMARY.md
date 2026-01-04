@@ -2,17 +2,19 @@
 
 **Engineer:**  Adilson Dias
 **Repository:** [fpga-trading-systems](https://github.com/adilsondias-engineer/fpga-trading-systems)
-**Hardware:** Xilinx Arty A7-100T (Artix-7 FPGA)
+**Hardware:**
+- Digilent Arty A7-100T (XC7A100T) - Projects 1-19
+- ALINX AX7203 (XC7A200T) - Project 20+ (Gigabit RGMII)
 
 ---
 
 ## Executive Summary
 
-**Complete full-stack FPGA trading system** from hardware acceleration to multi-platform applications. Implements wire-to-application processing with sub-5μs FPGA latency + multi-protocol distribution (TCP/MQTT/Kafka) to desktop, mobile, and IoT clients.
+**Complete full-stack FPGA trading system** from hardware acceleration to multi-platform applications. Implements wire-to-application processing with **312 ns FPGA latency** (hardware-measured with 4-point timestamping) + multi-protocol distribution (TCP/MQTT/Kafka) to desktop, mobile, and IoT clients.
 
 **Unique Value Proposition:** 20+ years C++ systems engineering + 17 years active/intermittent futures trading (S&P 500, Nasdaq) + FPGA hardware acceleration + full-stack application development (C++, Java, .NET, IoT).
 
-**Development Achievement:** 18 complete projects, 360+ hours of development, demonstrating end-to-end trading infrastructure from FPGA hardware acceleration to automated market making strategies.
+**Development Achievement:** 29 projects (28 complete), 560+ hours of development, demonstrating end-to-end trading infrastructure from FPGA hardware acceleration to GPU-accelerated ML inference, automated market making strategies, and dedicated control panel UI.
 
 ---
 
@@ -20,7 +22,7 @@
 
 ### 1. Complete Market Data Pipeline (Projects 6-8)
 
-**End-to-End Latency:** < 5 μs (Ethernet PHY → Best Bid/Offer output)
+**End-to-End Latency:** **312 ns** (Ethernet PHY → UDP TX start, hardware-measured with 4-point timestamping)
 
 ```
 Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker → Output
@@ -41,11 +43,11 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 | ITCH Decoder | < 1 μs | Multi-symbol filtering |
 | Order Processing | 120-170 ns | Full lifecycle (A/E/X/D/U) |
 | BBO Update | 2.6 μs | Real-time price level scan |
-| **Total Pipeline** | **< 5 μs** | **Hardware-verified** |
+| **ITCH Parse → UDP TX** | **312 ns** | **4-point hardware timestamping** |
 
 **Comparison:**
 - Software (OS network stack): 10-100+ μs, non-deterministic
-- This FPGA implementation: < 5 μs, deterministic
+- This FPGA implementation: **312 ns** (hardware-measured), deterministic
 
 ### 3. Test Data & Validation
 
@@ -104,16 +106,29 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 - [COMPLETE] Timing closure and critical path optimization
 
 ### Network & Protocol Processing
-- [COMPLETE] Ethernet/MII physical layer
+- [COMPLETE] Ethernet/MII physical layer (100 Mbps)
+- [COMPLETE] Ethernet/RGMII physical layer (1000 Mbps Gigabit)
 - [COMPLETE] UDP/IP stack implementation
 - [COMPLETE] NASDAQ ITCH 5.0 protocol (9 message types)
 - [COMPLETE] Binary protocol parsing (big-endian, checksums)
+- [COMPLETE] Hardware CRC32 calculation (Ethernet FCS)
 
 ### Clock Domain Crossing & Timing
 - [COMPLETE] Gray code FIFO synchronizers
 - [COMPLETE] Metastability protection
 - [COMPLETE] XDC constraint management
 - [COMPLETE] Multi-clock domain systems (25 MHz PHY, 100 MHz processing)
+- [COMPLETE] RGMII clock domains (125 MHz RX/TX, 200 MHz system)
+- [COMPLETE] MMCM clock generation with phase shift (0° TXD, 90° TXC)
+- [COMPLETE] DDR ODDR/IDDR primitives for Gigabit RGMII
+- [COMPLETE] PCIe clock domain crossing (200 MHz system → 250 MHz PCIe)
+
+### PCIe & High-Speed Interfaces
+- [COMPLETE] Xilinx XDMA IP configuration and instantiation
+- [COMPLETE] AXI-Stream interface design for streaming data
+- [COMPLETE] PCIe Gen2 link training and validation
+- [COMPLETE] Vivado Block Design integration
+- [COMPLETE] Host-side XDMA driver usage (/dev/xdma0_c2h_0)
 
 ### Verification & Debug
 - [COMPLETE] Self-checking VHDL testbenches
@@ -167,7 +182,7 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 **Achievement:** Sub-microsecond UDP transmission, frees UART for debug, production trading system pattern
 **Key Innovation:** eth_udp_send_wrapper.sv flattens SystemVerilog interfaces for VHDL instantiation
 **Technologies:** VHDL + SystemVerilog, XDC timing constraints for generated clocks, pipelined state machine
-**Performance:** < 5 μs wire-to-UDP latency, 256-byte binary packets, big-endian fixed-point format
+**Performance:** 312 ns ITCH-to-UDP latency (4-point hardware-measured), 256-byte binary packets, big-endian fixed-point format
 
 ### Project 09: C++ Order Gateway (UART-based Multi-Protocol Distribution)
 **Problem Solved:** Bridge FPGA to diverse application types (desktop, mobile, IoT, analytics)
@@ -401,7 +416,7 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 ### Project 19: PY32F030 FPGA Status Display
 **Problem Solved:** External microcontroller-based monitoring and configuration for FPGA trading system
 **Architecture:** Modular SPI slave (spi_slave_core → spi_register_if → application), 6-register bank, clock domain crossing
-**Key Innovation:** Heterogeneous system integration—dedicated ARM Cortex-M0 handles slow UI/monitoring while FPGA focuses on ultra-low-latency processing (< 5 μs wire-to-BBO)
+**Key Innovation:** Heterogeneous system integration—dedicated ARM Cortex-M0 handles slow UI/monitoring while FPGA focuses on ultra-low-latency processing (312 ns ITCH-to-BBO, hardware-measured)
 **Components:**
   - **spi_slave_core.vhd:** Generic SPI Mode 0 protocol handler (reusable across projects)
   - **spi_register_if.vhd:** Application-specific register mapping (6 registers: 4 read-only status + 2 read-write config)
@@ -437,6 +452,140 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
   - **Interface:** SPI master (up to 12 MHz), UART debug via ST-Link V2
 **Technologies:** VHDL (FPGA SPI slave), C (PY32 firmware), SPI Mode 0, 2-FF CDC synchronizers, BRAM-style register bank
 **Status:** Functional - SPI register interface complete and validated with 10k message test
+
+### Project 20: Gigabit Ethernet Order Book (RGMII TX) - AX7203 Migration
+**Problem Solved:** Migrate trading system from Arty A7-100T (MII 100 Mbps) to ALINX AX7203 (RGMII Gigabit) for 10× bandwidth improvement
+**Architecture:** Full system migration with RGMII TX implementation, hardware CRC32, reset synchronization
+**Key Innovation:** Proper CDC reset synchronization with 2-stage synchronizer and ASYNC_REG attributes
+**Hardware Migration:**
+  - **Source Board:** Digilent Arty A7-100T (XC7A100T)
+  - **Target Board:** ALINX AX7203 (XC7A200T) - 2.1× logic, 2.7× BRAM, 3.1× DSP
+  - **System Clock:** 100 MHz → 200 MHz
+  - **Ethernet Interface:** MII (4-bit SDR @ 25 MHz) → RGMII (4-bit DDR @ 125 MHz)
+**RGMII TX Implementation:**
+  - **DDR Output:** ODDR primitives for 4-bit TX data at 125 MHz (1 Gbps effective)
+  - **Clock Generation:** MMCM produces 125 MHz @ 0° (TXD) + 125 MHz @ 90° (TXC)
+  - **Phase Shift:** 90° TX clock required for RGMII setup/hold timing compliance
+  - **CRC32 Calculation:** Hardware FCS validated with Wireshark packet capture
+**Clock Domains:**
+  - 200 MHz system (order book, ITCH parser)
+  - 125 MHz RGMII RX (from PHY)
+  - 125 MHz RGMII TX (from MMCM, dual-phase)
+**Critical Bug Fix:**
+  - **Original Issue:** Combinatorial CDC violation `reset_tx <= reset or (not tx_pll_locked)`
+  - **Root Cause:** Asynchronous signal crossing from 200 MHz to 125 MHz domain
+  - **Solution:** 2-stage synchronizer with ASYNC_REG attributes on both flip-flops
+  - **Result:** TX packets now transmit reliably on hardware
+**BBO Payload Format (28 bytes):**
+  - Symbol (8B) + Bid Price (4B) + Bid Size (4B) + Ask Price (4B) + Ask Size (4B) + Spread (4B)
+  - Big-endian encoding, fixed-point prices (4 decimal places)
+**Resources:** ~33% LUT, ~11% BRAM (significant headroom for future expansion)
+**Latency:** Sub-microsecond BBO processing, ITCH parse → UDP TX = **312 ns** (4-point hardware-measured)
+**Technologies:** VHDL, RGMII, DDR ODDR, MMCM, CRC32, async FIFO CDC
+**Status:** COMPLETE - validated with real BBO packets on hardware (Wireshark confirmed)
+
+### Project 21: PCIe XDMA Test (AX7203)
+**Problem Solved:** Validate PCIe XDMA IP configuration and basic DMA functionality
+**Architecture:** Standalone XDMA IP test with loopback capability
+**Key Achievement:** PCIe Gen2 x1 link established and validated (500 MB/s theoretical)
+**Technologies:** Vivado Block Design, XDMA IP, PCIe constraints
+**Status:** COMPLETE - PCIe link training validated with lspci
+
+### Project 22: PCIe + Ethernet Integration Test
+**Problem Solved:** Verify simultaneous Ethernet RX and PCIe TX operation
+**Architecture:** RGMII receiver + async FIFO + AXI-Stream to XDMA
+**Key Achievement:** Demonstrated data path from Ethernet to PCIe host
+**Technologies:** VHDL, AXI-Stream, CDC FIFO, XDMA
+**Status:** COMPLETE - End-to-end data path validated
+
+### Project 23: Order Book with PCIe Output
+**Problem Solved:** Full trading system with BBO output via PCIe instead of UDP
+**Architecture:** Complete pipeline: RGMII RX → ITCH Parser → Order Book → PCIe XDMA
+**Key Innovation:** BBO packets sent via PCIe for lower latency than Ethernet TX
+**Data Flow:**
+  1. Ethernet PHY (JL2121) → RGMII RX @ 125 MHz
+  2. MAC/IP/UDP Parser → ITCH 5.0 Parser
+  3. Multi-Symbol Order Book (8 symbols, 1024 orders each)
+  4. BBO Tracker → CDC FIFO → AXI-Stream @ 250 MHz
+  5. XDMA → PCIe Gen2 x1 → Host PC
+**BBO Packet Structure (48 bytes):**
+  - Symbol (8B) + Bid/Ask Price (4B each) + Bid/Ask Size (4B each)
+  - Spread (4B) + Timestamps T1-T4 (16B) + Sequence (4B)
+**Known Issue:** Spread values may be stale due to BBO scan timing (workaround: calculate on host)
+**Host Tool:** bbo_verify.c reads and validates BBO packets from /dev/xdma0_c2h_0
+**Technologies:** VHDL, AXI-Stream, XDMA, PCIe Gen2, CDC FIFO
+**Status:** COMPLETE - BBO streaming working, spread calculated on host side
+
+### Project 24: Order Gateway (Low-Latency PCIe Passthrough)
+**Problem Solved:** Ultra-low-latency PCIe bridge between FPGA and downstream trading components
+**Architecture:** PCIeListener → BBOValidator → Disruptor Producer (raw BBO)
+**Key Innovation:** Pipeline parallelism—XGBoost moved to P25 so P24 processes next BBO while P25 runs inference
+**Data Flow:**
+  1. FPGA (P23) → PCIe C2H DMA → PCIeListener
+  2. 48-byte BBO packets parsed and validated
+  3. Raw BBO published to Disruptor shared memory
+  4. P25 performs GPU inference in parallel with P24's next PCIe read
+**Performance:**
+  - PCIe read: ~1-2 μs
+  - BBO parse + validation: ~0.5 μs
+  - Disruptor publish: ~0.5 μs
+  - Total: ~2-4 μs (passthrough only)
+**Technologies:** C++20, PCIe XDMA, Disruptor shared memory
+**Status:** COMPLETE - Restructured for pipeline parallelism (XGBoost moved to P25)
+
+### Project 25: Market Maker (XGBoost + Strategy FSM)
+**Problem Solved:** GPU-accelerated ML inference and automated market making strategy
+**Architecture:** Disruptor Consumer → XGBoostPredictor (GPU) → MarketMakerFSM → OrderProducer → P26
+**Key Innovation:** XGBoost inference runs in P25 for pipeline parallelism with P24's PCIe reads
+**XGBoost Model:** itch_predictor.ubj (36MB, 84% prediction accuracy)
+**Features:**
+  - XGBoost GPU inference (~10-100 μs on RTX 5090)
+  - Fair value calculation with size-weighted mid-price
+  - Position-based inventory skew adjustment
+  - Real-time PnL tracking (realized + unrealized)
+  - Confidence-weighted position sizing from ML predictions
+**FSM States:** IDLE → PREDICT → CALCULATE → QUOTE → RISK_CHECK → ORDER_GEN → WAIT_FILL
+**Performance:**
+  - XGBoost GPU inference: ~10-100 μs
+  - FSM processing: ~1-2 μs
+  - Total: ~12-102 μs
+**Technologies:** C++20, XGBoost C API, CUDA 13.0, Disruptor shared memory, nlohmann/json
+**Status:** COMPLETE - XGBoost inference relocated from P24 for pipeline parallelism
+
+### Project 26: Order Execution (Simulated Fills)
+**Problem Solved:** Simulated order matching with configurable latency
+**Architecture:** Order Ring Consumer → Simulated Matching → Fill Ring Producer
+**Features:**
+  - Configurable fill latency (default 50 μs)
+  - Partial fill simulation
+  - Rejection simulation
+  - Fill notifications back to P25
+**Technologies:** C++20, Disruptor shared memory, nlohmann/json
+**Status:** COMPLETE - Restructured from Project 16 (removed FIX protocol)
+
+### Project 28: System Orchestrator
+**Problem Solved:** Unified orchestration of P24, P25, P26 with lifecycle management
+**Architecture:** Process management, dependency resolution, Prometheus metrics
+**Startup Sequence:** P24 → P25 → P26 (with configurable delays)
+**Health Checks:** Process alive, shared memory verification
+**Technologies:** C++20, fork/exec, POSIX signals, Prometheus
+**Status:** COMPLETE - Restructured from Project 18 (removed P17 and simulated exchange)
+
+### Project 29: TradingOS Control Panel (SDL2 DRM/KMS)
+**Problem Solved:** Dedicated graphical interface for trading system monitoring and control
+**Architecture:** SDL2 DRM/KMS → UIManager → ProcessManager → MetricsReader
+**Key Innovation:** Renders directly to framebuffer without X11/Wayland, eliminating display server overhead
+**Display:** 5120x1440 ultrawide fullscreen on dedicated monitor
+**Features:**
+  - Process control for P24, P25, P26 (start/stop/restart)
+  - Real-time metrics display (CPU, GPU, Memory utilization)
+  - Per-process status with BBO/s, latency, running state
+  - System log viewer with color-coded log levels
+  - Keyboard navigation (Tab/Enter) and mouse support
+  - Background logo with configurable opacity
+**Widgets:** Button, StatusBox, ProgressBar, LogViewer, Header, BackgroundLogo, AboutDialog
+**Technologies:** C++17, SDL2 (DRM/KMS backend), SDL2_image, SDL2_ttf, nlohmann/json
+**Status:** COMPLETE - Runs on dedicated ultrawide display without desktop environment
 
 ---
 
@@ -521,7 +670,7 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 - Vivado synthesis/implementation/bitstream generation
 - XDC constraint management (timing, pin assignments)
 - VHDL testbench simulation
-- Hardware validation on Arty A7-100T
+- Hardware validation on Arty A7-100T (P1-19) and ALINX AX7203 (P20-29)
 - Python/Scapy automated testing
 - Git version control with build tracking
 
@@ -582,8 +731,11 @@ fpga-trading-systems/
 ├── PORTFOLIO_SUMMARY.md               # This document
 ├── SYSTEM_ARCHITECTURE.md             # Complete system architecture documentation
 ├── docs/
-│   ├── system_architecture.png        # Visual architecture diagram
-│   ├── lessons-learned.md             # Technical lessons from all 12 projects
+│   ├── SYSTEM_ARCHITECTURE.md         # Complete system architecture documentation
+│   ├── PORTFOLIO_SUMMARY.md           # Technical portfolio summary
+│   ├── TRADINGOS.md                   # TradingOS custom Linux distribution
+│   ├── images/                        # Architecture diagrams
+│   ├── lessons-learned.md             # Technical lessons from all projects
 │   └── *.png                          # Screenshots (ESP32, mobile, desktop apps)
 ├── 01-rotary-encoder/                 # Foundation: Quadrature decoding
 ├── 02-button-debouncer/               # Foundation: Metastability protection
@@ -604,6 +756,15 @@ fpga-trading-systems/
 ├── 17-hardware-timestamping/          # Monitoring: SO_TIMESTAMPING + Prometheus
 ├── 18-complete-system/                # Orchestration: System integration + metrics
 ├── 19-py32-fpga-status/               # PY32F030 FPGA Status Display
+├── 20-rgmii-ax7203/                   # Gigabit Ethernet (RGMII TX) on AX7203
+├── 21-pcie-xdma-test/                 # PCIe XDMA IP validation
+├── 22-pcie-eth-test/                  # PCIe + Ethernet integration test
+├── 23-order-book/                     # Order Book with PCIe BBO output
+├── 24-order-gateway/                  # PCIe passthrough (raw BBO to Disruptor)
+├── 25-market-maker/                   # XGBoost GPU + strategy FSM
+├── 26-order-execution/                # Simulated fills via Disruptor
+├── 28-complete-system/                # System orchestrator for P24-P26
+├── 29-trading-ui/                     # SDL2 DRM/KMS control panel (5120x1440)
 └── build.cmd                          # Universal build automation (Windows)
 ```
 
@@ -647,9 +808,17 @@ fpga-trading-systems/
 
 ---
 
-**Project Status:** **FUNCTIONAL** - All 19 projects implemented and tested (December 2025)
-**Development Time:** 360+ hours
+**Project Status:** **FUNCTIONAL** - 29 projects (28 complete, 1 in progress) (January 2026)
+**Development Time:** 560+ hours
 **System Status:** Fully integrated and operational with NASDAQ ITCH feed (historic data file simulating live feed)
+
+**New Architecture (Projects 24-29):**
+- PCIe passthrough (P24) + XGBoost GPU inference (P25) for pipeline parallelism
+- End-to-end latency: ~15-107 μs (FPGA → PCIe → GPU → Order)
+- XGBoost prediction accuracy: 84% (vs 70% for LLaMA)
+- Data flow: FPGA (P23) → PCIe → P24 (passthrough) → Disruptor → P25 (XGBoost) → P26
+- Pipeline parallelism: P24 processes next BBO while P25 runs GPU inference
+- Control panel: P29 SDL2 DRM/KMS on 5120x1440 ultrawide display
 
 ---
 
@@ -686,5 +855,5 @@ fpga-trading-systems/
 
 ---
 
-**Last Updated:** December 2025
-**Status:** Complete and tested on Xilinx Arty A7-100T hardware
+**Last Updated:** January 2026
+**Status:** Complete and tested on Arty A7-100T (P1-19) and ALINX AX7203 (P20-29) hardware

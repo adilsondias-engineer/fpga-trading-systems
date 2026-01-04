@@ -1,8 +1,0 @@
-/work/projects/fpga-trading-systems/16-order-execution/build/CMakeFiles/order_execution_engine.dir
-/work/projects/fpga-trading-systems/16-order-execution/build/CMakeFiles/simulated_exchange.dir
-/work/projects/fpga-trading-systems/16-order-execution/build/CMakeFiles/edit_cache.dir
-/work/projects/fpga-trading-systems/16-order-execution/build/CMakeFiles/rebuild_cache.dir
-/work/projects/fpga-trading-systems/16-order-execution/build/CMakeFiles/list_install_components.dir
-/work/projects/fpga-trading-systems/16-order-execution/build/CMakeFiles/install.dir
-/work/projects/fpga-trading-systems/16-order-execution/build/CMakeFiles/install/local.dir
-/work/projects/fpga-trading-systems/16-order-execution/build/CMakeFiles/install/strip.dir

@@ -178,22 +178,94 @@ spi_slave.vhd            ← Backward compatibility wrapper
 - **Implementation:** FPGA shifts left (MSB out), PY32 receives MSB first and reconstructs
 **Lesson:** Choose byte order based on system integration, not individual module convenience
 
+**18. Reset Synchronization for CDC (Project 20)**
+**Problem:** TX path not transmitting packets despite valid data
+**Root Cause:** Combinatorial CDC violation
+```vhdl
+-- WRONG: Combinatorial logic crossing clock domains
+reset_tx <= reset or (not tx_pll_locked);
+```
+**Solution:** 2-stage synchronizer with ASYNC_REG attributes
+```vhdl
+signal reset_tx_sync1 : STD_LOGIC := '1';
+signal reset_tx_sync2 : STD_LOGIC := '1';
+attribute ASYNC_REG : string;
+attribute ASYNC_REG of reset_tx_sync1 : signal is "TRUE";
+attribute ASYNC_REG of reset_tx_sync2 : signal is "TRUE";
+
+process(clk_txd)
+begin
+    if rising_edge(clk_txd) then
+        reset_tx_sync1 <= reset or (not tx_pll_locked);
+        reset_tx_sync2 <= reset_tx_sync1;
+        reset_tx <= reset_tx_sync2;
+    end if;
+end process;
+```
+**Lesson:** All signals crossing clock domains require synchronization. Combinatorial expressions cannot cross CDC boundaries safely.
+
+**19. RGMII TX Clock Phase Shift (Project 20)**
+**Requirement:** RGMII specification requires 90° phase shift on TX clock relative to TX data
+**Implementation:**
+- MMCM generates dual clocks: 125 MHz @ 0° (TXD) + 125 MHz @ 90° (TXC)
+- 0° clock drives ODDR for TXD and TXCTL
+- 90° clock drives ODDR for TXC output
+**Why:** 2ns delay (90° of 8ns period) provides proper setup/hold time at PHY
+**Lesson:** RGMII timing compliance requires careful clock phase management via MMCM
+
+**20. DDR Output via ODDR Primitives (Project 20)**
+**RGMII uses DDR signaling:** 4-bit data at 125 MHz = 8 bits per clock = 1 Gbps
+**Implementation:**
+```vhdl
+ODDR_TXD: ODDR
+    generic map (DDR_CLK_EDGE => "SAME_EDGE")
+    port map (
+        C => clk_125mhz,
+        CE => '1',
+        D1 => tx_data(3 downto 0),  -- Rising edge
+        D2 => tx_data(7 downto 4),  -- Falling edge
+        Q => rgmii_txd
+    );
+```
+**Lesson:** Gigabit Ethernet RGMII requires DDR primitives. Cannot use simple signal assignments for 1 Gbps throughput.
+
+**21. Hardware CRC32 for Ethernet FCS (Project 20)**
+**Requirement:** Ethernet frames require 32-bit CRC (FCS) appended to payload
+**Implementation:**
+- Calculate CRC32 as each byte transmits (running calculation)
+- Output inverted, bit-reversed CRC after payload completes
+- Polynomial: 0x04C11DB7 (IEEE 802.3 standard)
+**Validation:** Wireshark confirms "Frame check sequence: [correct]"
+**Lesson:** Ethernet FCS is inverted and bit-reversed. Standard CRC32 algorithms need post-processing.
+
+**22. Spread Data Path Through FIFO (Project 20)**
+**Issue:** Spread value not appearing in UDP packets
+**Root Cause:** Incomplete data path
+- order_book calculated spread but trading_top didn't export it
+- FIFO packing didn't include spread field
+- ethernet_top spread input was unconnected
+**Fix:** Trace complete data path from source to destination:
+1. Add `bbo_spread` output port to trading_top
+2. Update FIFO packing to include spread in bits [63:32]
+3. Connect spread through all intermediate components
+**Lesson:** When adding new fields, trace the complete data path through all FIFOs and hierarchies
+
 ### Development Workflow
 
-**18. Documentation First**
+**23. Documentation First**
 - **Mistake:** Coded RGMII interface without reading docs (wasted 4 hours)
 - **Correct:** 30 min reading Arty A7 manual → found MII interface
 - **Savings:** 3.5 hours
 - **Lesson:** Read hardware docs before coding
 
-**19. Incremental Integration**
+**24. Incremental Integration**
 - Phase 1A: MII + MAC → Verify
 - Phase 1D: + IP → Verify
 - Phase 1F: + UDP → Verify
 - **Anti-pattern:** Build entire stack, debug all layers at once
 - **Lesson:** Verify each layer before adding next
 
-**20. Component Interface Management**
+**25. Component Interface Management**
 - **Solutions:**
   - Direct entity instantiation (recommended - single source of truth)
   - Auto-generate component from entity
@@ -202,7 +274,7 @@ spi_slave.vhd            ← Backward compatibility wrapper
 
 ### Software Performance Optimization
 
-**21. Real-Time Scheduling vs Multi-Core Isolation (Project 14)**
+**26. Real-Time Scheduling vs Multi-Core Isolation (Project 14)**
 - **Experiment:** Compared SCHED_FIFO RT scheduling vs CFS with CPU isolation
 - **Hardware:** AMD Ryzen AI 9 365 (10 cores, 20 threads)
 - **Workload:** ~400 UDP BBO messages/sec
@@ -216,7 +288,7 @@ spi_slave.vhd            ← Backward compatibility wrapper
   ```
 - **Lesson:** RT scheduling isn't always optimal. Multi-core isolation with CFS can provide better performance for workloads with moderate variability. Profile both approaches.
 
-**22. Database Query Optimization - Cursor Selection**
+**27. Database Query Optimization - Cursor Selection**
 - **Problem:** Python script processing MySQL data at 40 msg/sec (expected 400 msg/sec), using only 1% CPU
 - **Root Cause:** Server-side cursor (SSCursor) fetching rows one-by-one → 8,000+ network round-trips
 - **Solution:**
@@ -226,7 +298,7 @@ spi_slave.vhd            ← Backward compatibility wrapper
 - **Expected Result:** 10× speedup (40 → 400 msg/sec)
 - **Lesson:** Network-bound operations disguise as low CPU usage. Client-side cursors for bulk queries, server-side only for streaming large result sets.
 
-**23. Binary Protocols vs ASCII/Hex (Projects 9 vs 14)**
+**28. Binary Protocols vs ASCII/Hex (Projects 9 vs 14)**
 - **ASCII/Hex (Project 9 UART):** 10.67 µs avg parse latency, hex-to-decimal conversion overhead
 - **Binary (Project 14 UDP):** 2.09 µs avg parse latency (5.1× faster)
 - **Additional Benefits:**
@@ -235,7 +307,7 @@ spi_slave.vhd            ← Backward compatibility wrapper
   - Deterministic parsing time
 - **Lesson:** Binary protocols critical for low-latency systems. ASCII/hex suitable for debugging, not production.
 
-**24. Interface Selection Impact (UART vs UDP)**
+**29. Interface Selection Impact (UART vs UDP)**
 - **UART @ 115200 baud (Project 9):**
   - Throughput: ~96 BBO msg/sec
   - Latency: 10.67 µs avg (gateway parsing)
@@ -247,7 +319,7 @@ spi_slave.vhd            ← Backward compatibility wrapper
 - **Improvement:** 53× parsing, 21× E2E latency reduction
 - **Lesson:** Interface choice dominates system performance. UART acceptable for debugging, UDP/Ethernet essential for production trading systems.
 
-**25. Scapy Performance on Linux (Testing Tools)**
+**30. Scapy Performance on Linux (Testing Tools)**
 - **Problem:** Scapy's `sendp()` for raw Ethernet frames extremely slow on Linux (~100-200 pkt/sec)
 - **Root Cause:** Raw socket overhead, kernel path for Layer 2 sending
 - **Solution:** Use native UDP sockets instead
@@ -261,7 +333,7 @@ spi_slave.vhd            ← Backward compatibility wrapper
 - **Impact:** 100× throughput improvement for test scripts
 - **Lesson:** Scapy excellent for packet inspection/analysis, but use native sockets for high-throughput testing.
 
-**26. Mock Test Data Generators (Testing Without Hardware)**
+**31. Mock Test Data Generators (Testing Without Hardware)**
 - **Challenge:** Testing Project 14 (UDP gateway) requires FPGA sending BBO packets
 - **Solution:** Created `mock_bbo_sender.py` to simulate FPGA UDP output
   - Sends 256-byte binary BBO packets matching Project 13 format
@@ -2902,7 +2974,7 @@ UDP/IP Packet (192.168.0.212:5000 → 192.168.0.93:5000)
 **Key Achievements:**
 1. **Mixed-Language Integration** - SystemVerilog wrapper pattern for VHDL interoperability
 2. **Timing Closure** - Correct XDC constraints for generated clocks, pipelined state machine
-3. **UDP Transmission** - Real-time BBO distribution with < 5 μs wire-to-UDP latency
+3. **UDP Transmission** - Real-time BBO distribution with **312 ns** ITCH-to-UDP latency (4-point hardware-measured)
 4. **Production Pattern** - Standard trading system architecture (UDP market data, UART debug)
 5. **Binary Protocol** - Efficient packet format with Python/C++ parsing support
 
@@ -4052,8 +4124,212 @@ class Sequencer {
 
 ---
 
-**Last Updated:** Projects 1-18 Complete - XDP + Disruptor Integration (November 2025)
+## Projects 19-23: PCIe Integration - XDMA and AXI-Stream (December 2025)
 
-**Development Time:** 360+ hours
+### PCIe IP Selection: XDMA vs AXI Memory Mapped
+
+**Problem:** Needed PCIe data path for BBO output. Two Xilinx IP options:
+- **AXI Memory Mapped PCIe** - Direct BAR access, complex AXI interconnect
+- **XDMA** - DMA engine with AXI-Stream interface, simpler integration
+
+**Solution:** Used XDMA IP for streaming data:
+- AXI-Stream interface matches our packet-based BBO data naturally
+- Built-in DMA eliminates need for custom DMA engine
+- H2C (Host to Card) and C2H (Card to Host) channels
+- Interrupt support for completion notification
+
+**Lesson:** XDMA is ideal for streaming data; AXI MM better for register/memory access.
+
+### PCIe Gen2 Lane Width Issues (AX7203)
+
+**Problem:** AX7203 board designed for Gen2 x4, but only x1 link established.
+
+**Investigation:**
+- Checked XDMA IP configuration (x4 enabled)
+- Verified constraints file lane assignments
+- lspci showed Gen2 x1 instead of x4
+
+**Root Cause:** Hardware limitation or slot configuration. The FPGA/board combination limited to x1.
+
+**Workaround:** Gen2 x1 provides 500 MB/s (5 GT/s), sufficient for BBO packets (48 bytes @ ~10K/sec = 0.5 MB/s).
+
+**Lesson:** Always verify actual link width with `lspci -vvv`. Design for minimum required bandwidth, not theoretical maximum.
+
+### Clock Domain Crossing for PCIe
+
+**Problem:** Order book runs at 200 MHz (system clock), PCIe XDMA at 250 MHz (from PCIe refclk).
+
+**Solution:** Async FIFO (bbo_cdc_fifo.vhd) between domains:
+```
+Order Book (200 MHz) → CDC FIFO → AXI-Stream (250 MHz) → XDMA
+```
+
+**Critical Details:**
+- Gray code pointers for safe CDC
+- Proper synchronizer chains (2-3 FF)
+- Almost-full/almost-empty flags with margin
+
+**Lesson:** Always use proven async FIFO primitives for CDC. Never assume "close enough" frequencies are synchronous.
+
+### BBO Spread Timing Bug (Stale Values)
+
+**Problem:** bbo_verify showed incorrect spread values:
+```
+BBO #4: Bid=$312.12, Ask=$319.22, Spread=$7.10  ✓
+BBO #5: Bid=$321.02, Ask=$321.84, Spread=$7.10  ✗ (should be $0.82)
+```
+
+**Investigation:**
+1. Traced through bbo_tracker.vhd spread calculation - logic correct
+2. Found BBO scan takes ~7168 cycles (512 levels × 7 cycles × 2 sides)
+3. Multi-symbol arbiter outputs BBO every 1000 cycles
+4. Timing mismatch: New scan may not complete before next output
+
+**Root Cause:** Race condition between BBO scan completion and arbiter output timing.
+
+**Workaround:** Calculate spread on host side from bid/ask prices:
+```c
+/* bbo_verify.c - Calculate spread locally */
+if (pkt->ask_price > pkt->bid_price) {
+    calculated_spread = pkt->ask_price - pkt->bid_price;
+} else {
+    calculated_spread = 0;  /* Crossed market */
+}
+```
+
+**Proper Fix (TODO):** Add handshaking between bbo_tracker and arbiter to ensure scan complete before output.
+
+**Lesson:** Multi-cycle operations need explicit completion signaling. "Ready" signals must account for full operation latency.
+
+### Crossed Markets in Test Data
+
+**Problem:** Spread calculation showed negative values (unsigned underflow) during testing.
+
+**Investigation:** With limited test data (100-1000 messages per symbol), order book builds incrementally. Early state may have:
+- Only bid orders (no asks yet)
+- Only ask orders (no bids yet)
+- Crossed market (bid > ask) temporarily
+
+**Solution:** Handle crossed markets explicitly:
+```c
+if (ask_price > bid_price) {
+    spread = ask_price - bid_price;
+} else {
+    spread = 0;  /* Crossed or no spread */
+}
+```
+
+**Lesson:** Test data may not represent steady-state market conditions. Always handle edge cases in market data.
+
+### BRAM Initialization vs Reset
+
+**Problem:** Order book BRAM retained stale data between test runs.
+
+**Investigation:**
+- BRAM initialization only happens at FPGA configuration (bitstream load)
+- Reset signal clears registers but not BRAM contents
+- Xilinx BRAM primitives: INIT_xx attributes set power-on values only
+
+**Solution:** Added BRAM clear state machine that runs after reset:
+```vhdl
+type clear_state_t is (CLEAR_IDLE, CLEAR_ACTIVE, CLEAR_DONE);
+-- On reset, iterate through all addresses writing zeros
+```
+
+**Lesson:** BRAM != registers. Reset behavior must be explicitly designed. Consider clear time in system startup.
+
+### AXI-Stream Packet Formatting
+
+**BBO Packet Structure (48 bytes):**
+```
+Bytes 0-7:   Symbol (8-char ASCII, padded)
+Bytes 8-11:  Bid Price (32-bit, 4 decimal fixed-point)
+Bytes 12-15: Bid Size (32-bit shares)
+Bytes 16-19: Ask Price (32-bit, 4 decimal fixed-point)
+Bytes 20-23: Ask Size (32-bit shares)
+Bytes 24-27: Spread (32-bit, 4 decimal fixed-point)
+Bytes 28-31: T1 Timestamp (ITCH receive)
+Bytes 32-35: T2 Timestamp (Order book update)
+Bytes 36-39: T3 Timestamp (PCIe queue)
+Bytes 40-43: T4 Timestamp (PCIe transmit)
+Bytes 44-47: Sequence Number
+```
+
+**AXI-Stream Signals:**
+- `tdata[63:0]`: 64-bit data bus (6 beats per packet)
+- `tvalid`: Data valid
+- `tready`: Backpressure from XDMA
+- `tlast`: End of packet marker
+- `tkeep[7:0]`: Byte enables (all 1s except last beat)
+
+**Lesson:** Fixed packet size simplifies AXI-Stream logic. tlast must align with actual packet boundary.
+
+### Host-Side XDMA Access
+
+**Driver Setup:**
+```bash
+# Load Xilinx XDMA driver
+sudo modprobe xdma
+
+# Device nodes created:
+/dev/xdma0_c2h_0  # Card-to-Host channel 0
+/dev/xdma0_h2c_0  # Host-to-Card channel 0
+/dev/xdma0_user   # User interrupts
+```
+
+**Reading BBO Packets:**
+```c
+int fd = open("/dev/xdma0_c2h_0", O_RDONLY);
+while (1) {
+    ssize_t n = read(fd, buffer, sizeof(bbo_packet_t));
+    if (n == sizeof(bbo_packet_t)) {
+        process_bbo(buffer);
+    }
+}
+```
+
+**Lesson:** XDMA provides simple file-based interface. No custom kernel driver needed for basic streaming.
+
+### Project File Organization
+
+**Problem:** Large projects accumulate unused files, making navigation difficult.
+
+**Solution:** Created PROJECT_STRUCTURE.md documenting:
+- Build configuration (top module, target, scripts)
+- RTL hierarchy (only files in build)
+- Unused files section
+- Data flow diagram
+- Key signals reference
+
+**Lesson:** Document project structure early. Update when files added/removed. Helps future debugging.
+
+### PCIe Skills Demonstrated (Projects 19-23)
+
+**PCIe Fundamentals:**
+- XDMA IP configuration and instantiation
+- AXI-Stream interface design
+- Clock domain crossing to PCIe domain
+- Link training and width negotiation
+
+**Vivado Block Design:**
+- XDMA IP customization
+- Block design wrapper generation
+- Constraint file integration with block design
+
+**Host Integration:**
+- XDMA Linux driver usage
+- C host applications for PCIe data
+- Packet parsing and verification
+
+**Debugging Techniques:**
+- lspci for link status verification
+- ILA for AXI-Stream signal capture
+- Host-side packet dumps for data verification
+
+---
+
+**Last Updated:** Projects 1-23 - PCIe BBO Output Integration (December 2025)
+
+**Development Time:** 560+ hours
 
 This document grows with each project and includes lessons from all phases.

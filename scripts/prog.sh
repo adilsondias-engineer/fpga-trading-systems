@@ -1,0 +1,1 @@
+vivado -mode batch -source scripts/program.tcl -tclargs $1

@@ -6,7 +6,7 @@ Comprehensive list of documentation, datasheets, specifications, and tools used 
 
 ## Hardware Documentation
 
-### Xilinx Arty A7-100T
+### Digilent Arty A7-100T (Projects 1-19)
 
 **Official Documentation:**
 
@@ -30,6 +30,52 @@ Comprehensive list of documentation, datasheets, specifications, and tools used 
 - USB: UART bridge (FTDI FT2232HQ)
 - Ethernet: 10/100 PHY (TI DP83848J)
 - Peripherals: 4 buttons, 4 switches, 4 LEDs, 2 RGB LEDs
+
+### ALINX AX7203 (Project 20+)
+
+**Official Documentation:**
+
+- [AX7203 Product Page](https://www.en.alinx.com/Product/FPGA-Development-Boards/Artix-7/AX7203.html)
+  - Board overview and features
+  - Technical specifications
+  - Ordering information
+
+- [AX7203 User Manual (PDF)](https://www.alinx.com/public/upload/file/AX7203_User_Manual.pdf)
+  - Pin assignments and schematic
+  - Peripheral interfaces
+  - Example designs
+
+- [AMD Partner Page](https://www.xilinx.com/products/boards-and-kits/1-1s6r42o.html)
+  - Xilinx certification
+  - Technical overview
+
+**Board Features:**
+
+- FPGA: Xilinx Artix-7 XC7A200T-2FBG484I
+- Clock: 200 MHz LVDS differential, 125 MHz GTP reference
+- Memory: 1 GB DDR3 (32-bit, 800 MT/s), 16 MB QSPI Flash
+- USB: UART bridge (CP2102GM)
+- Ethernet: **2× Gigabit Ethernet** (Realtek RTL8211E, RGMII)
+- GTP: 4× transceivers (up to 6.6 Gb/s per channel)
+- PCIe: Gen2 ×4 interface
+- HDMI: 1× input, 1× output
+- Expansion: 2× 40-pin headers (68 I/O)
+- Form Factor: Core board (AC7200) + Carrier board
+
+**Comparison with Arty A7-100T:**
+
+| Feature | Arty A7-100T | AX7203 |
+|---------|--------------|--------|
+| FPGA | XC7A100T | XC7A200T |
+| Logic Cells | 101,440 | 215,360 (**2.1×**) |
+| Block RAM | 135 | 365 (**2.7×**) |
+| DSP Slices | 240 | 740 (**3.1×**) |
+| GTP Transceivers | 0 | 4 |
+| Ethernet | MII 100M | RGMII Gigabit |
+| DDR3 | 256 MB | 1 GB |
+| System Clock | 100 MHz | 200 MHz |
+
+**See Also:** [AX7203 Full Specifications](AX7203_SPECS.md)
 
 ### Xilinx FPGA
 
@@ -77,7 +123,7 @@ Comprehensive list of documentation, datasheets, specifications, and tools used 
 
 ## Ethernet PHY Documentation
 
-### TI DP83848J (Arty A7 Ethernet PHY)
+### TI DP83848J (Arty A7 Ethernet PHY - MII)
 
 **Datasheet:**
 
@@ -101,6 +147,61 @@ Comprehensive list of documentation, datasheets, specifications, and tools used 
 - Requires external 25 MHz reference clock
 - PHY provides eth_rx_clk and eth_tx_clk to FPGA
 - Minimum 10ms reset pulse required
+
+### Realtek RTL8211E (AX7203 Ethernet PHY - RGMII)
+
+**Datasheet:**
+
+- [RTL8211E Gigabit Ethernet PHY](https://www.realtek.com/en/products/communications-network-ics/item/rtl8211e-vb-vl-cg)
+  - RGMII interface specification
+  - Register map (MDIO)
+  - LED configuration
+  - Timing diagrams
+
+**Key Specifications:**
+
+- Interface: RGMII (Reduced Gigabit Media Independent Interface)
+- Speed: 10/100/1000 Mbps (Gigabit capable)
+- Clock: 125 MHz RX clock output, FPGA provides TX clock
+- Data: 4-bit DDR (8 bits per clock @ 125 MHz = 1 Gbps)
+- Auto-negotiation: IEEE 802.3ab compliant
+
+**Critical Notes:**
+
+- RGMII requires DDR I/O primitives (ODDR/IDDR in Xilinx)
+- TX clock must be 90° phase-shifted from TX data (RGMII spec)
+- FPGA must generate TX clock using MMCM/PLL
+- RX clock comes from PHY (use as MMCM reference)
+- Internal delay mode: Configure for 2ns internal delay or use FPGA IDELAY
+
+### RGMII Interface Specification
+
+**Official Specification:**
+
+- [RGMII v2.0 Specification (HP/Intel)](https://web.archive.org/web/20160303212629/http://www.hp.com/rnd/pdfs/RGMIIv2_0_final_hp.pdf)
+  - Complete timing requirements
+  - Clock-data relationship
+  - Internal delay options
+
+**RGMII vs MII Comparison:**
+
+| Feature | MII | RGMII |
+|---------|-----|-------|
+| Data Width | 4 bits (SDR) | 4 bits (DDR) |
+| Clock Rate (1000M) | N/A | 125 MHz |
+| Clock Rate (100M) | 25 MHz | 25 MHz |
+| Clock Rate (10M) | 2.5 MHz | 2.5 MHz |
+| TX Clock Source | PHY | FPGA (90° shifted) |
+| Pin Count | 18 | 12 |
+| Max Speed | 100 Mbps | 1000 Mbps |
+
+**FPGA Implementation Requirements:**
+
+- **ODDR primitives:** For DDR TX data output
+- **IDDR primitives:** For DDR RX data input (if implementing RX)
+- **MMCM/PLL:** Generate 125 MHz + 125 MHz @ 90° phase
+- **BUFG/BUFIO:** Proper clock routing
+- **ASYNC_REG:** For reset synchronization across clock domains
 
 ---
 
@@ -587,7 +688,7 @@ These videos validate the architectural decisions made in Projects 6-16:
 - ✅ Market-making logic (Project 15 FSM)
 - ✅ Order execution pipeline (Project 16)
 
-Key insights: Production HFT systems use software feed handlers + FPGA acceleration (flexible), while this project uses FPGA feed handler (faster but less flexible). Both approaches achieve sub-5μs latency competitive for most trading strategies.
+Key insights: Production HFT systems use software feed handlers + FPGA acceleration (flexible), while this project uses FPGA feed handler (faster but less flexible). This project achieves **312 ns** latency (4-point hardware-measured), competitive for most trading strategies.
 
 ---
 
@@ -683,7 +784,7 @@ Key insights: Production HFT systems use software feed handlers + FPGA accelerat
 **FPGA-Microcontroller Integration:**
 - Project 19 demonstrates production-grade heterogeneous system integration
 - Modular SPI architecture (spi_slave_core → spi_register_if → application) enables reusability
-- Pattern: FPGA handles time-critical paths (< 5 μs), microcontroller handles UI/monitoring/configuration
+- Pattern: FPGA handles time-critical paths (312 ns ITCH-to-BBO, hardware-measured), microcontroller handles UI/monitoring/configuration
 
 **Key Architectural Lessons:**
 - **Separation of Concerns:** FPGA → low-latency processing, MCU → slow UI/display tasks
@@ -693,4 +794,4 @@ Key insights: Production HFT systems use software feed handlers + FPGA accelerat
 
 ---
 
-_This resource list grows with each project. Last updated: Project 19 (PY32F030 FPGA Status Display via SPI)_
+_This resource list grows with each project. Last updated: Project 20 (Gigabit Ethernet Order Book - AX7203 Migration)_

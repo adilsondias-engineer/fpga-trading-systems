@@ -1,9 +1,9 @@
 # FPGA Trading System - Complete Architecture & Design
 
-**Date:** December 2025
-**Status:** FUNCTIONAL - XDP Kernel Bypass Gateway + Market Maker + Full Application Suite + PY32 FPGA Monitoring
-**Projects:** 6-19 (Network Stack → Order Book → UDP TX → XDP Gateway → Market Maker + Desktop/Mobile/IoT Applications + PY32 SPI Monitoring)
-**Development Time:** 380+ hours
+**Date:** January 2026
+**Status:** FUNCTIONAL - PCIe Pipeline Architecture + XGBoost GPU Inference + SDL2 Control Panel
+**Projects:** 6-29 (Network Stack → Order Book → PCIe Bridge → Pipeline Processing → SDL2 UI)
+**Development Time:** 560+ hours
 
 ---
 
@@ -82,7 +82,11 @@ A complete **low-latency market data processing and distribution system** combin
 
 ## Architecture Layers
 
-### Layer 1: Hardware (FPGA - Artix-7 100T)
+### Layer 1: Hardware (FPGA - Artix-7)
+
+**Development Boards:**
+- **Arty A7-100T** (XC7A100T) - Projects 6-8, 13, 19 - MII 100 Mbps Ethernet
+- **ALINX AX7203** (XC7A200T) - Project 20+ - RGMII Gigabit Ethernet
 
 **Purpose:** Ultra-low-latency market data processing in hardware
 
@@ -139,7 +143,7 @@ A complete **low-latency market data processing and distribution system** combin
   - SystemVerilog wrapper flattens interfaces for VHDL instantiation
   - Pipelined nibble formatter (CALC_NIBBLE → WRITE_NIBBLE) for timing closure
   - XDC constraints for generated clk_25mhz (not eth_tx_clk)
-- **Latency:** < 5 µs wire-to-UDP
+- **Latency:** 312 ns ITCH parse → UDP TX (4-point hardware-measured)
 - **Output:** UDP packets
   ```
   Destination: 192.168.0.93:5000
@@ -173,11 +177,36 @@ A complete **low-latency market data processing and distribution system** combin
   - **Address Byte Trailing Edge:** Explicit bit_count=2 check skips premature shift on falling edge
 - **PY32F030 Hardware:** ARM Cortex-M0 @ 24 MHz, 64 KB Flash, 8 KB SRAM, SPI master (up to 12 MHz)
 - **Architecture Benefits:**
-  - **Resource Optimization:** FPGA LUTs/BRAM dedicated to time-critical paths only (< 5 μs wire-to-BBO)
+  - **Resource Optimization:** FPGA LUTs/BRAM dedicated to time-critical paths only (312 ns ITCH-to-BBO, hardware-measured)
   - **Dynamic Configuration:** PY32 writes SYMBOL_EN, THRESHOLD via SPI (no FPGA reprogramming)
   - **Independent Monitoring:** External watchdog can reset FPGA if status registers freeze
   - **Scalability:** Register bank expandable to 256 registers (8-bit address space)
 - **Example Output:** `Orders: 1 | BBO: 2 | Lat: 3 ns | Status: 0x00000004 | Symbol: 0xFF | Threshold: 1000`
+
+#### Project 20: Gigabit Ethernet Order Book (RGMII TX) - AX7203 Migration
+- **Purpose:** Full trading system migration from Arty A7-100T to ALINX AX7203 with Gigabit Ethernet
+- **Hardware Upgrade:**
+  - **Board:** Arty A7-100T → ALINX AX7203
+  - **FPGA:** XC7A100T → XC7A200T (2.1× logic, 2.7× BRAM, 3.1× DSP)
+  - **System Clock:** 100 MHz → 200 MHz
+  - **Ethernet:** MII 100 Mbps → RGMII 1000 Mbps (10× bandwidth)
+- **Architecture:**
+  - RGMII TX with DDR ODDR primitives for 4-bit data at 125 MHz (1 Gbps)
+  - MMCM clock generation: 125 MHz @ 0° (TXD) + 125 MHz @ 90° (TXC)
+  - Hardware CRC32 calculation for Ethernet FCS (validated with Wireshark)
+  - Async FIFO CDC from 200 MHz order book to 125 MHz RGMII TX
+- **Key Innovation:** Proper reset synchronization with 2-stage CDC and ASYNC_REG attributes
+- **Clock Domains:**
+  - 200 MHz system clock (order book, ITCH parser)
+  - 125 MHz RGMII RX (from PHY)
+  - 125 MHz RGMII TX (from MMCM, 0° and 90° phases)
+- **BBO Payload Format (28 bytes):**
+  ```
+  Symbol (8B) + Bid Price (4B) + Bid Size (4B) + Ask Price (4B) + Ask Size (4B) + Spread (4B)
+  ```
+- **Resources:** ~33% LUT, ~11% BRAM utilization (significant headroom for expansion)
+- **Latency:** Sub-microsecond BBO processing, ITCH parse → UDP TX = **312 ns** (4-point hardware-measured)
+- **Status:** FUNCTIONAL - validated with real BBO packets on hardware
 
 ---
 
@@ -1396,6 +1425,180 @@ With 8 symbols: 96 / 8 = 12 BBO/sec per symbol
 - Crypto exchange order books
 - DeFi liquidity tracking
 - On-chain settlement
+
+---
+
+---
+
+## PCIe Pipeline Architecture (Projects 21-29)
+
+**Architecture Overview:** Production trading system with FPGA PCIe bridge, pipeline-parallel GPU inference, and dedicated control panel.
+
+### Pipeline Parallelism Design
+
+The PCIe architecture implements pipeline parallelism to maximize throughput:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                    FPGA Layer (Project 23 - AX7203 Artix-7)                          │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│  Ethernet RX → UDP/IP → ITCH 5.0 → Order Book → BBO Tracker → PCIe C2H DMA          │
+│   (RGMII)      200 MHz   200 MHz     200 MHz       200 MHz      250 MHz              │
+│                                                                                      │
+│  Output: 48-byte BBO packets (Symbol + Bid/Ask/Spread + 4-point Timestamps)         │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          │ PCIe Gen2 x4 (/dev/xdma0_c2h_0)
+                                          │ ~1-2 μs DMA latency
+                                          ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│           Project 24: Order Gateway (Low-Latency PCIe Passthrough)                   │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│  PCIeListener → BBO Validation → Disruptor Producer                                 │
+│     1-2 μs          ~1 μs              ~0.5 μs                                       │
+│                                                                                      │
+│  Design: XGBoost inference moved to P25 for pipeline parallelism                    │
+│  Benefit: Sub-5 μs passthrough allows P24 to process next BBO while P25 infers      │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          │ Disruptor Shared Memory
+                                          ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│           Project 25: Market Maker (XGBoost GPU + Strategy)                          │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│  Disruptor Consumer → XGBoostPredictor (GPU) → MarketMakerFSM → Order Producer      │
+│       ~0.5 μs            10-100 μs               ~5 μs             ~0.5 μs           │
+│                                                                                      │
+│  XGBoost Model: itch_predictor.ubj (36MB, 84% accuracy)                             │
+│  GPU: RTX 5090 CUDA backend (~10-100 μs inference)                                  │
+│  ML-enhanced fair value: base_fair_value + prediction * spread * weight             │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          │ Order Ring
+                                          ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│           Project 26: Order Execution (Simulated Fills)                              │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│  Order Consumer → Simulated Matching → Fill Producer                                │
+│       ~0.5 μs         50 μs (config)        ~0.5 μs                                 │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          │ Fill Ring → P25
+                                          ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│           Project 28: System Orchestrator                                            │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│  Manages lifecycle: P24 → P25 → P26 (startup order, health checks, metrics)         │
+│  Prometheus metrics on port 9094                                                    │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          │ Status/Control
+                                          ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│           Project 29: TradingOS Control Panel (SDL2 DRM/KMS)                         │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│  SDL2 DRM/KMS → UIManager → ProcessManager → MetricsReader                          │
+│  5120x1440 ultrawide fullscreen on dedicated display (no X11/Wayland)               │
+│                                                                                      │
+│  Features: Process start/stop, real-time CPU/GPU/Memory metrics, log viewer         │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Project 24: Order Gateway (Low-Latency PCIe Passthrough)
+
+**Purpose:** Ultra-low-latency PCIe passthrough from FPGA to downstream processing
+
+**Architecture:**
+- PCIeListener reads BBO from /dev/xdma0_c2h_0
+- BBO validation filters corrupted data
+- Disruptor Producer publishes to shared memory
+
+**Design Decision:** XGBoost inference relocated to P25 for pipeline parallelism
+- P24 latency reduced from ~300μs to sub-5μs
+- P24 processes next BBO while P25 runs inference on previous BBO
+
+### Project 25: Market Maker (XGBoost GPU + Strategy)
+
+**Purpose:** Consumes BBO from P24, runs XGBoost GPU inference, generates orders
+
+**XGBoost Integration:**
+```cpp
+// ML-enhanced fair value calculation
+double MarketMakerFSM::applyMLPrediction(double base_fair_value, const BBO& bbo) {
+    std::vector<float> features = {
+        static_cast<float>(bbo.bid_price),
+        static_cast<float>(bbo.ask_price),
+        static_cast<float>(bbo.bid_shares),
+        static_cast<float>(bbo.ask_shares),
+        static_cast<float>(bbo.spread),
+        static_cast<float>((bbo.bid_price + bbo.ask_price) / 2.0)
+    };
+
+    float prediction = predictor_->predict(features);
+    double spread = bbo.ask_price - bbo.bid_price;
+    double adjustment = prediction * spread * config_.xgboost.prediction_weight;
+
+    return base_fair_value + adjustment;
+}
+```
+
+**Configuration:**
+```json
+{
+    "xgboost": {
+        "enabled": true,
+        "model_path": "/opt/trading/model/itch_predictor.ubj",
+        "use_gpu": true,
+        "gpu_device_id": 0,
+        "prediction_weight": 0.5
+    }
+}
+```
+
+### Project 29: TradingOS Control Panel
+
+**Purpose:** Graphical control panel for TradingOS running directly on framebuffer
+
+**Architecture:**
+- SDL2 with DRM/KMS backend (no X11/Wayland required)
+- UIManager handles window, rendering, events
+- ProcessManager controls P24/P25/P26 lifecycle
+- MetricsReader gathers CPU/GPU/Memory utilization
+
+**Features:**
+- Process control (start/stop/restart) for each trading process
+- Real-time metrics display (CPU, GPU, Memory progress bars)
+- Per-process status with BBO/s, latency, running state
+- System log viewer with color-coded log levels
+- Dedicated display for trading system monitoring
+
+**Display Configuration:**
+- Resolution: 5120x1440 ultrawide fullscreen
+- DRM/KMS for minimal latency
+- No desktop environment required
+
+**Startup Script:**
+```bash
+#!/bin/bash
+export SDL_VIDEODRIVER=kmsdrm
+export SDL_RENDER_DRIVER=software
+exec /opt/trading/bin/trading_ui "$@"
+```
+
+### End-to-End Latency (Pipeline Parallelism)
+
+| Stage | Latency |
+|-------|---------|
+| PCIe read | ~1-2 μs |
+| P24 passthrough | ~3 μs |
+| Disruptor transfer | ~0.5 μs |
+| XGBoost GPU inference (P25) | ~10-100 μs |
+| Market maker FSM | ~5 μs |
+| Order execution | ~50 μs (simulated) |
+| **Total** | **~70-160 μs** |
+
+**Pipeline Benefit:** P24 processes next BBO while P25 runs inference on current BBO.
+Effective throughput improved by decoupling PCIe read from GPU inference.
 
 ---
 

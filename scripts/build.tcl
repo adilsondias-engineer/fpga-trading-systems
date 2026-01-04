@@ -45,7 +45,7 @@ if { [llength $xpr_files] == 0 } {
     exit 1
 }
 
-set_param general.maxThreads 16
+set_param general.maxThreads 1
 
 set project_file [lindex $xpr_files 0]
 puts "=========================================="
@@ -65,7 +65,7 @@ reset_run impl_1
 
 # Launch synthesis
 puts "\n>>> Starting synthesis..."
-launch_runs synth_1 -jobs 16
+launch_runs synth_1 -jobs 1
 wait_on_run synth_1
 
 # Check synthesis status
@@ -85,7 +85,7 @@ puts ">>> Synthesis completed successfully!"
 
 # Launch implementation
 puts "\n>>> Starting implementation..."
-launch_runs impl_1 -jobs 16
+launch_runs impl_1 -jobs 1
 wait_on_run impl_1
 
 # Check implementation status
@@ -105,7 +105,7 @@ puts ">>> Implementation completed successfully!"
 
 # Generate bitstream
 puts "\n>>> Generating bitstream..."
-launch_runs impl_1 -to_step write_bitstream -jobs 16
+launch_runs impl_1 -to_step write_bitstream -jobs 1
 wait_on_run impl_1
 
 puts "\n=========================================="

@@ -1,36 +1,23 @@
 #!/usr/bin/env python3
 """
-itch_mysql_importer.py - Import ITCH PCAP files to MySQL/MariaDB
+itch_mysql_importer_fixed.py - Import ITCH binary files to MySQL/MariaDB
 
-Handles 20+ million records efficiently with proper indexing and batching.
-Replaces SQLite for better scalability and concurrent access.
+FIXED: Uses streaming/generator pattern to avoid memory explosion on Linux.
+The original loaded entire file into a list causing segfaults with large files.
 
 Requirements:
-    pip install scapy pymysql
-
-MySQL Setup:
-    CREATE DATABASE itch_data CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-    CREATE USER 'itch_user'@'localhost' IDENTIFIED BY 'password';
-    GRANT ALL PRIVILEGES ON itch_data.* TO 'itch_user'@'localhost';
-    FLUSH PRIVILEGES;
+    pip install pymysql
 
 Usage:
-    python itch_mysql_importer.py nasdaq_itch50.pcap --host localhost --user itch_user --password your_password
+    python itch_mysql_importer_fixed.py 12302019.NASDAQ_ITCH50 \
+        --host localhost --user root --password xxx --database nasdaq_itch
 """
 
 import sys
 import argparse
 import struct
-from datetime import datetime
 from collections import defaultdict
 import time
-
-try:
-    from scapy.all import rdpcap, Raw
-except ImportError:
-    print("\nERROR: Scapy not installed")
-    print("Install with: pip install scapy")
-    sys.exit(1)
 
 try:
     import pymysql
@@ -41,24 +28,211 @@ except ImportError:
     sys.exit(1)
 
 
-class MySQLITCHImporter:
-    """Import ITCH messages from PCAP to MySQL with optimized batching"""
+# ITCH 5.0 message lengths (bytes, excluding 2-byte length prefix)
+ITCH_MESSAGE_LENGTHS = {
+    b'S': 12,   # System Event
+    b'R': 39,   # Stock Directory
+    b'H': 25,   # Stock Trading Action
+    b'Y': 20,   # Reg SHO Restriction
+    b'L': 26,   # Market Participant Position
+    b'V': 35,   # MWCB Decline Level
+    b'W': 12,   # MWCB Status
+    b'K': 28,   # IPO Quoting Period Update
+    b'J': 35,   # LULD Auction Collar
+    b'h': 21,   # Operational Halt
+    b'A': 36,   # Add Order (no MPID)
+    b'F': 40,   # Add Order (with MPID)
+    b'E': 31,   # Order Executed
+    b'C': 36,   # Order Executed with Price
+    b'X': 23,   # Order Cancel
+    b'D': 19,   # Order Delete
+    b'U': 35,   # Order Replace
+    b'P': 44,   # Trade (non-cross)
+    b'Q': 40,   # Cross Trade
+    b'B': 19,   # Broken Trade
+    b'I': 50,   # NOII
+}
 
-    # ITCH 5.0 message types (all 9 types supported by FPGA)
-    MESSAGE_TYPES = {
-        'S': 'System Event',
-        'R': 'Stock Directory',
-        'A': 'Add Order',
-        'E': 'Order Executed',
-        'X': 'Order Cancel',
-        'D': 'Order Delete',
-        'U': 'Order Replace',
-        'P': 'Trade',
-        'Q': 'Cross Trade'
+# Message types we care about (FPGA supported + order lifecycle)
+SUPPORTED_TYPES = {
+    'S': 'System Event',
+    'R': 'Stock Directory', 
+    'A': 'Add Order',
+    'F': 'Add Order (MPID)',
+    'E': 'Order Executed',
+    'C': 'Order Executed Price',
+    'X': 'Order Cancel',
+    'D': 'Order Delete',
+    'U': 'Order Replace',
+    'P': 'Trade',
+    'Q': 'Cross Trade'
+}
+
+
+def parse_itch_message(msg_type_byte: bytes, payload: bytes):
+    """
+    Parse ITCH message to extract symbol and timestamp.
+    
+    Returns dict with type, symbol, timestamp_ns, raw bytes.
+    Symbol extraction varies by message type per ITCH 5.0 spec.
+    """
+    msg_type = msg_type_byte.decode('ascii')
+    
+    if msg_type not in SUPPORTED_TYPES:
+        return None
+    
+    result = {
+        'type': msg_type,
+        'symbol': None,
+        'timestamp_ns': None,
+        'order_ref': None,
+        'raw': payload
     }
+    
+    # Extract timestamp (bytes 5-10, 6 bytes, nanoseconds since midnight)
+    # All messages have timestamp at same offset
+    if len(payload) >= 11:
+        # 6-byte big-endian timestamp
+        ts_bytes = payload[5:11]
+        result['timestamp_ns'] = int.from_bytes(ts_bytes, 'big')
+    
+    # Extract symbol based on message type
+    # ITCH 5.0 spec defines different offsets per message type
+    
+    if msg_type == 'S':
+        # System Event: No symbol (12 bytes total)
+        pass
+        
+    elif msg_type == 'R':
+        # Stock Directory: symbol at offset 11, 8 bytes
+        if len(payload) >= 19:
+            result['symbol'] = payload[11:19].decode('ascii', errors='ignore').strip()
+            
+    elif msg_type == 'A':
+        # Add Order (no MPID): 36 bytes
+        # order_ref at 11-18 (8 bytes), buy_sell at 19, shares at 20-23
+        # symbol at 24-31 (8 bytes), price at 32-35
+        if len(payload) >= 32:
+            result['order_ref'] = int.from_bytes(payload[11:19], 'big')
+            result['symbol'] = payload[24:32].decode('ascii', errors='ignore').strip()
+            
+    elif msg_type == 'F':
+        # Add Order (with MPID): 40 bytes
+        # Same as A but with 4-byte MPID at end
+        if len(payload) >= 32:
+            result['order_ref'] = int.from_bytes(payload[11:19], 'big')
+            result['symbol'] = payload[24:32].decode('ascii', errors='ignore').strip()
+            
+    elif msg_type == 'E':
+        # Order Executed: 31 bytes
+        # order_ref at 11-18, NO SYMBOL (must lookup from Add order)
+        if len(payload) >= 19:
+            result['order_ref'] = int.from_bytes(payload[11:19], 'big')
+        # symbol = None (intentional - ITCH spec doesn't include it)
+        
+    elif msg_type == 'C':
+        # Order Executed with Price: 36 bytes
+        # order_ref at 11-18, NO SYMBOL
+        if len(payload) >= 19:
+            result['order_ref'] = int.from_bytes(payload[11:19], 'big')
+            
+    elif msg_type == 'X':
+        # Order Cancel: 23 bytes
+        # order_ref at 11-18, NO SYMBOL
+        if len(payload) >= 19:
+            result['order_ref'] = int.from_bytes(payload[11:19], 'big')
+            
+    elif msg_type == 'D':
+        # Order Delete: 19 bytes
+        # order_ref at 11-18, NO SYMBOL
+        if len(payload) >= 19:
+            result['order_ref'] = int.from_bytes(payload[11:19], 'big')
+            
+    elif msg_type == 'U':
+        # Order Replace: 35 bytes
+        # orig_order_ref at 11-18, new_order_ref at 19-26
+        # shares at 27-30, price at 31-34
+        # NO SYMBOL (must lookup from original Add order)
+        if len(payload) >= 27:
+            result['order_ref'] = int.from_bytes(payload[11:19], 'big')  # Original ref
+            
+    elif msg_type == 'P':
+        # Trade (non-cross): 44 bytes
+        # order_ref at 11-18, buy_sell at 19, shares at 20-23
+        # symbol at 24-31 (8 bytes), price at 32-35, match at 36-43
+        if len(payload) >= 32:
+            result['order_ref'] = int.from_bytes(payload[11:19], 'big')
+            result['symbol'] = payload[24:32].decode('ascii', errors='ignore').strip()
+            
+    elif msg_type == 'Q':
+        # Cross Trade: 40 bytes
+        # shares at 11-18 (8 bytes!), symbol at 19-26, price at 27-30
+        if len(payload) >= 27:
+            result['symbol'] = payload[19:27].decode('ascii', errors='ignore').strip()
+    
+    return result
+
+
+def stream_itch_file(filename: str, max_messages: int = None):
+    """
+    Generator that streams ITCH messages from binary file.
+    
+    ITCH 5.0 binary format:
+    - Each message prefixed with 2-byte big-endian length
+    - Message data follows immediately
+    
+    Yields:
+        Parsed message dicts
+    """
+    message_count = 0
+    
+    with open(filename, 'rb') as f:
+        while True:
+            # Read 2-byte length prefix
+            length_bytes = f.read(2)
+            if not length_bytes or len(length_bytes) < 2:
+                break
+            
+            msg_length = struct.unpack('>H', length_bytes)[0]
+            
+            if msg_length == 0:
+                continue
+            
+            # Read message payload
+            payload = f.read(msg_length)
+            if len(payload) < msg_length:
+                print(f"Warning: Truncated message at offset {f.tell()}, expected {msg_length}, got {len(payload)}")
+                break
+            
+            # Remove trailing null bytes (ITCH messages should never have trailing zeros)
+            # This prevents database padding issues and ensures clean message storage
+            payload = payload.rstrip(b'\x00')
+            
+            # Validate payload is not empty after stripping
+            if len(payload) == 0:
+                continue  # Skip empty messages
+            
+            # Get message type (first byte)
+            msg_type_byte = payload[0:1]
+            
+            # Parse message
+            msg = parse_itch_message(msg_type_byte, payload)
+            if msg:
+                yield msg
+                message_count += 1
+                
+                if message_count % 1_000_000 == 0:
+                    print(f"  Streamed {message_count:,} messages...")
+                
+                if max_messages and message_count >= max_messages:
+                    print(f"Reached limit of {max_messages:,} messages")
+                    break
+
+
+class MySQLITCHImporter:
+    """Import ITCH messages to MySQL with streaming and order_ref tracking"""
 
     def __init__(self, host, user, password, database='itch_data', port=3306):
-        """Initialize MySQL connection with optimized settings"""
         print(f"Connecting to MySQL: {user}@{host}:{port}/{database}")
 
         self.conn = pymysql.connect(
@@ -68,9 +242,8 @@ class MySQLITCHImporter:
             password=password,
             database=database,
             charset='utf8mb4',
-            #auth_plugin_map='caching_sha2_password',  # MySQL 8.0+ default authentication
             cursorclass=pymysql.cursors.DictCursor,
-            autocommit=False  # Manual commit for batch optimization
+            autocommit=False
         )
         self.cursor = self.conn.cursor()
 
@@ -79,11 +252,15 @@ class MySQLITCHImporter:
         self.cursor.execute("SET SESSION autocommit = 0")
         self.cursor.execute("SET SESSION unique_checks = 0")
         self.cursor.execute("SET SESSION foreign_key_checks = 0")
-
+        
+        # Order reference to symbol mapping (for E/X/D/C messages)
+        # This is the KEY fix - track order_ref -> symbol from A/F messages
+        self.order_ref_to_symbol = {}
+        
         print("Connected to MySQL successfully")
 
     def create_tables(self, drop_existing=False):
-        """Create optimized tables with proper indexing"""
+        """Create tables with order_ref column for joins"""
 
         if drop_existing:
             print("Dropping existing tables...")
@@ -93,39 +270,35 @@ class MySQLITCHImporter:
 
         print("Creating tables...")
 
-        # Main messages table - optimized for time-series queries
+        # Main messages table with order_ref for E/X/D/C lookups
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS itch_messages (
                 id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 timestamp_ns BIGINT UNSIGNED NOT NULL,
                 message_type CHAR(1) NOT NULL,
                 stock_symbol VARCHAR(8),
+                order_ref BIGINT UNSIGNED,
                 raw_message BLOB NOT NULL,
 
-                -- Indexes for common queries
                 INDEX idx_timestamp (timestamp_ns),
                 INDEX idx_symbol_time (stock_symbol, timestamp_ns),
                 INDEX idx_type (message_type),
+                INDEX idx_order_ref (order_ref),
                 INDEX idx_symbol_type (stock_symbol, message_type)
             ) ENGINE=InnoDB
             ROW_FORMAT=COMPRESSED
             KEY_BLOCK_SIZE=8
-            COMMENT='ITCH 5.0 messages - optimized for time-series replay'
         """)
 
-        # Symbols catalog with statistics
+        # Symbols catalog
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS symbols (
                 symbol VARCHAR(8) PRIMARY KEY,
                 message_count INT UNSIGNED DEFAULT 0,
                 first_seen BIGINT UNSIGNED,
                 last_seen BIGINT UNSIGNED,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-                INDEX idx_count (message_count DESC),
-                INDEX idx_first_seen (first_seen)
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB
-            COMMENT='Symbol statistics and catalog'
         """)
 
         # Import tracking
@@ -143,156 +316,67 @@ class MySQLITCHImporter:
         self.conn.commit()
         print("Tables created successfully")
 
-    def parse_itch_message(self, payload):
-        """Parse ITCH message to extract type, symbol, and timestamp"""
-        if len(payload) < 2:
-            return None
-
-        msg_type = chr(payload[0])
-
-        # Extract symbol if present (offset varies by message type)
-        symbol = None
-        if msg_type in ['R', 'A', 'E', 'X', 'D', 'U', 'P', 'Q']:
-            # Symbol is 8 bytes at offset 24 for most order-related messages
-            if len(payload) >= 32:
-                symbol_bytes = payload[24:32]
-                symbol = symbol_bytes.decode('ascii', errors='ignore').strip()
-
-        return {
-            'type': msg_type,
-            'symbol': symbol if symbol else None,
-            'raw': bytes(payload)
-        }
-
-    def _read_binary_itch(self, filename):
+    def import_file(self, input_file, batch_size=10000, max_messages=None, 
+                    track_order_refs=True, progress_interval=100000):
         """
-        Read binary ITCH 5.0 file and yield messages
-
-        ITCH 5.0 format:
-        - Big-endian
-        - Variable length messages
-        - 2-byte length prefix + message data
-
-        Yields:
-            Tuples of (timestamp_ns, message_dict)
-        """
-        print(f"Reading binary ITCH 5.0 file: {filename}")
-
-        messages = []
-        message_count = 0
-        current_timestamp = int(time.time() * 1e9)  # Base timestamp
-
-        with open(filename, 'rb') as f:
-            while True:
-                # Read 2-byte length (big-endian)
-                length_bytes = f.read(2)
-                if not length_bytes or len(length_bytes) < 2:
-                    break  # End of file
-
-                msg_length = struct.unpack('>H', length_bytes)[0]
-
-                # Read message payload
-                payload = f.read(msg_length)
-                if len(payload) < msg_length:
-                    print(f"Warning: Truncated message at offset {f.tell()}")
-                    break
-
-                # Parse message
-                msg = self.parse_itch_message(payload)
-                if msg:
-                    # Use sequential timestamps (increment by 1µs per message)
-                    timestamp_ns = current_timestamp + (message_count * 1000)
-                    messages.append((timestamp_ns, msg))
-                    message_count += 1
-
-                    # Progress display for large files
-                    if message_count % 1000000 == 0:
-                        print(f"  Read {message_count:,} messages...")
-                    if message_count > 100000000:
-                        print("100000000 messages reached, stopping import")
-                        break
-        print(f"Read {message_count:,} messages from binary ITCH file")
-        return messages
-
-    def _read_pcap(self, filename):
-        """
-        Read PCAP file and extract ITCH messages
-
-        Yields:
-            Tuples of (timestamp_ns, message_dict)
-        """
-        print(f"Reading PCAP file: {filename}")
-
-        packets = rdpcap(filename)
-        messages = []
-
-        for i, pkt in enumerate(packets):
-            if Raw in pkt:
-                payload = bytes(pkt[Raw].load)
-                msg = self.parse_itch_message(payload)
-
-                if msg:
-                    # Use packet timestamp or synthetic
-                    timestamp_ns = int(time.time() * 1e9) + i
-                    messages.append((timestamp_ns, msg))
-
-        print(f"Read {len(messages):,} messages from PCAP")
-        return messages
-
-    def import_file(self, input_file, batch_size=10000, progress_interval=50000):
-        """
-        Import ITCH file (PCAP or binary) with optimized batching
-
+        Import ITCH file using streaming (no memory explosion).
+        
         Args:
-            input_file: Path to ITCH file (PCAP or binary)
-            batch_size: Number of records per batch insert (default 10,000)
-            progress_interval: Show progress every N messages
+            input_file: Path to binary ITCH file
+            batch_size: Records per batch insert
+            max_messages: Limit total messages (None = all)
+            track_order_refs: Build order_ref->symbol map for E/X/D/C
+            progress_interval: Print progress every N messages
         """
         print(f"\nImporting: {input_file}")
-        print(f"Batch size: {batch_size:,} messages")
+        print(f"Batch size: {batch_size:,}")
+        print(f"Track order_refs: {track_order_refs}")
+        if max_messages:
+            print(f"Max messages: {max_messages:,}")
 
         start_time = time.time()
-
-        # Detect file type and read
-        print("Reading file...")
-        try:
-            if input_file.endswith('.pcap') or input_file.endswith('.pcapng'):
-                messages = self._read_pcap(input_file)
-            else:
-                # Assume binary ITCH 5.0 file
-                messages = self._read_binary_itch(input_file)
-        except Exception as e:
-            print(f"ERROR reading file: {e}")
-            import traceback
-            traceback.print_exc()
-            return
-
-        print(f"File loaded, processing messages...")
-
-        # Prepare batch insert
+        
         batch = []
         total_count = 0
         type_counts = defaultdict(int)
         symbol_stats = defaultdict(lambda: {'count': 0, 'first': None, 'last': None})
+        
+        # Track order_ref -> symbol from A/F messages
+        order_ref_map = {} if track_order_refs else None
+        refs_resolved = 0
+        refs_unresolved = 0
 
-        last_progress_time = time.time()
-
-        for i, (timestamp_ns, msg) in enumerate(messages):
-            if not msg:
-                continue
-
+        for msg in stream_itch_file(input_file, max_messages):
+            msg_type = msg['type']
+            symbol = msg['symbol']
+            order_ref = msg.get('order_ref')
+            timestamp_ns = msg['timestamp_ns']
+            
+            # Build order_ref -> symbol mapping from Add orders
+            if track_order_refs and order_ref:
+                if msg_type in ('A', 'F') and symbol:
+                    order_ref_map[order_ref] = symbol
+                elif msg_type in ('E', 'C', 'X', 'D', 'U') and not symbol:
+                    # Lookup symbol from order_ref
+                    symbol = order_ref_map.get(order_ref)
+                    if symbol:
+                        refs_resolved += 1
+                    else:
+                        refs_unresolved += 1
+            
             # Add to batch
             batch.append((
                 timestamp_ns,
-                msg['type'],
-                msg['symbol'],
+                msg_type,
+                symbol,
+                order_ref,
                 msg['raw']
             ))
 
             # Update statistics
-            type_counts[msg['type']] += 1
-            if msg['symbol']:
-                stats = symbol_stats[msg['symbol']]
+            type_counts[msg_type] += 1
+            if symbol:
+                stats = symbol_stats[symbol]
                 stats['count'] += 1
                 if stats['first'] is None:
                     stats['first'] = timestamp_ns
@@ -304,26 +388,22 @@ class MySQLITCHImporter:
             if len(batch) >= batch_size:
                 self._insert_batch(batch)
                 batch = []
-                self.conn.commit()  # Commit every batch
+                self.conn.commit()
 
-            # Progress display
+            # Progress
             if total_count % progress_interval == 0:
-                now = time.time()
-                elapsed = now - start_time
-                rate = total_count / elapsed
+                elapsed = time.time() - start_time
+                rate = total_count / elapsed if elapsed > 0 else 0
+                mem_mb = len(order_ref_map) * 50 / 1024 / 1024 if order_ref_map else 0
+                print(f"  {total_count:,} messages ({rate:,.0f}/sec) "
+                      f"| order_ref map: {len(order_ref_map) if order_ref_map else 0:,} entries (~{mem_mb:.1f}MB)")
 
-                print(f"  Progress: {total_count:,} messages "
-                      f"({rate:.0f} msg/sec)")
-            if total_count > 100000000:
-                print("100000000 messages reached, stopping import")
-                break
-
-        # Insert remaining batch
+        # Insert remaining
         if batch:
             self._insert_batch(batch)
             self.conn.commit()
 
-        # Update symbol statistics table
+        # Update symbol stats
         print("\nUpdating symbol statistics...")
         self._update_symbol_stats(symbol_stats)
 
@@ -335,35 +415,44 @@ class MySQLITCHImporter:
             INSERT INTO import_stats (filename, total_messages, duration_seconds, messages_per_second)
             VALUES (%s, %s, %s, %s)
         """, (input_file, total_count, duration, int(rate)))
-
         self.conn.commit()
 
-        # Final report
+        # Report
         print(f"\n{'='*60}")
         print(f"Import Complete!")
         print(f"{'='*60}")
         print(f"Total messages: {total_count:,}")
         print(f"Duration: {duration:.1f} seconds")
-        print(f"Average rate: {rate:.0f} messages/second")
-        print(f"\nBreakdown by message type:")
+        print(f"Rate: {rate:,.0f} messages/second")
+        
+        if track_order_refs:
+            print(f"\nOrder reference tracking:")
+            print(f"  Unique order_refs: {len(order_ref_map):,}")
+            print(f"  E/X/D/C resolved: {refs_resolved:,}")
+            print(f"  E/X/D/C unresolved: {refs_unresolved:,}")
+        
+        print(f"\nMessage type breakdown:")
         for msg_type in sorted(type_counts.keys()):
             count = type_counts[msg_type]
             pct = (count / total_count) * 100
-            name = self.MESSAGE_TYPES.get(msg_type, 'Unknown')
+            name = SUPPORTED_TYPES.get(msg_type, 'Other')
             print(f"  {msg_type} ({name}): {count:,} ({pct:.1f}%)")
 
         print(f"\nUnique symbols: {len(symbol_stats):,}")
+        
+        # Clear order_ref map to free memory
+        if order_ref_map:
+            order_ref_map.clear()
 
     def _insert_batch(self, batch):
-        """Optimized batch insert"""
+        """Batch insert with order_ref column"""
         if not batch:
             return
 
         sql = """
-            INSERT INTO itch_messages (timestamp_ns, message_type, stock_symbol, raw_message)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO itch_messages (timestamp_ns, message_type, stock_symbol, order_ref, raw_message)
+            VALUES (%s, %s, %s, %s, %s)
         """
-
         self.cursor.executemany(sql, batch)
 
     def _update_symbol_stats(self, symbol_stats):
@@ -384,25 +473,32 @@ class MySQLITCHImporter:
             (symbol, stats['count'], stats['first'], stats['last'])
             for symbol, stats in symbol_stats.items()
         ]
-
         self.cursor.executemany(sql, batch)
         self.conn.commit()
 
-    def get_table_stats(self):
+    def get_stats(self):
         """Get current table statistics"""
         self.cursor.execute("""
             SELECT
                 COUNT(*) as total_messages,
+                COUNT(DISTINCT stock_symbol) as unique_symbols,
                 MIN(timestamp_ns) as first_timestamp,
-                MAX(timestamp_ns) as last_timestamp,
-                COUNT(DISTINCT stock_symbol) as unique_symbols
+                MAX(timestamp_ns) as last_timestamp
             FROM itch_messages
         """)
-
         return self.cursor.fetchone()
 
+    def get_type_distribution(self):
+        """Get message type distribution"""
+        self.cursor.execute("""
+            SELECT message_type, COUNT(*) as count
+            FROM itch_messages
+            GROUP BY message_type
+            ORDER BY count DESC
+        """)
+        return self.cursor.fetchall()
+
     def close(self):
-        """Close database connection"""
         self.cursor.close()
         self.conn.close()
         print("Database connection closed")
@@ -410,40 +506,39 @@ class MySQLITCHImporter:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Import ITCH files (PCAP or binary) to MySQL/MariaDB',
+        description='Import ITCH binary files to MySQL (streaming, memory-safe)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Import binary ITCH 5.0 file
-  python itch_mysql_importer.py 12302019.NASDAQ_ITCH50 --host localhost --user itch_user --password mypass
+  # Full import with order_ref tracking (resolves E/X/D/C symbols)
+  python itch_mysql_importer_fixed.py 12302019.NASDAQ_ITCH50 \\
+      --host localhost --user root --password xxx --database nasdaq_itch
 
-  # Import PCAP file
-  python itch_mysql_importer.py nasdaq.pcap --host localhost --user itch_user --password mypass
+  # Import first 10M messages only
+  python itch_mysql_importer_fixed.py 12302019.NASDAQ_ITCH50 \\
+      --host localhost --user root --password xxx --max-messages 10000000
 
-  # Import with custom batch size (faster for large files)
-  python itch_mysql_importer.py 12302019.NASDAQ_ITCH50 --host localhost --user root --password root --batch-size 50000
-
-  # Drop and recreate tables
-  python itch_mysql_importer.py data.pcap --host localhost --user root --password root --drop-tables
+  # Larger batch size for faster import
+  python itch_mysql_importer_fixed.py 12302019.NASDAQ_ITCH50 \\
+      --host localhost --user root --password xxx --batch-size 50000
         """
     )
 
-    parser.add_argument('itch_file', help='ITCH file (binary or PCAP) containing ITCH messages')
-    parser.add_argument('--host', default='localhost', help='MySQL host (default: localhost)')
-    parser.add_argument('--port', type=int, default=3306, help='MySQL port (default: 3306)')
-    parser.add_argument('--user', required=True, help='MySQL username')
-    parser.add_argument('--password', required=True, help='MySQL password')
-    parser.add_argument('--database', default='itch_data', help='Database name (default: itch_data)')
-    parser.add_argument('--batch-size', type=int, default=10000,
-                       help='Batch insert size (default: 10,000)')
-    parser.add_argument('--drop-tables', action='store_true',
-                       help='Drop existing tables before import')
-    parser.add_argument('--stats-only', action='store_true',
-                       help='Show database statistics without importing')
+    parser.add_argument('itch_file', help='Binary ITCH 5.0 file')
+    parser.add_argument('--host', default='venus', help='MySQL host')
+    parser.add_argument('--port', type=int, default=3306, help='MySQL port')
+    parser.add_argument('--user', default='fpga', help='MySQL username')
+    parser.add_argument('--password', default='password', help='MySQL password')
+    parser.add_argument('--database', default='itch_data', help='Database name')
+    parser.add_argument('--batch-size', type=int, default=10000, help='Batch insert size')
+    parser.add_argument('--max-messages', type=int, help='Limit total messages')
+    parser.add_argument('--drop-tables', action='store_true', help='Drop existing tables')
+    parser.add_argument('--no-track-refs', action='store_true', 
+                        help='Disable order_ref->symbol tracking (uses less memory)')
+    parser.add_argument('--stats-only', action='store_true', help='Show stats only')
 
     args = parser.parse_args()
 
-    # Connect to MySQL
     importer = MySQLITCHImporter(
         host=args.host,
         port=args.port,
@@ -454,25 +549,22 @@ Examples:
 
     try:
         if args.stats_only:
-            # Show statistics
-            stats = importer.get_table_stats()
+            stats = importer.get_stats()
             print("\nDatabase Statistics:")
-            print("=" * 60)
-            print(f"Total messages: {stats['total_messages']:,}")
-            print(f"Unique symbols: {stats['unique_symbols']:,}")
-            print(f"Time range: {stats['first_timestamp']} to {stats['last_timestamp']}")
-        else:
-            # Create tables
-            importer.create_tables(drop_existing=args.drop_tables)
-
-            # Import file
-            importer.import_file(args.itch_file, batch_size=args.batch_size)
-
-            # Show final stats
-            print("\nFinal database statistics:")
-            stats = importer.get_table_stats()
             print(f"  Total messages: {stats['total_messages']:,}")
             print(f"  Unique symbols: {stats['unique_symbols']:,}")
+            
+            print("\nMessage type distribution:")
+            for row in importer.get_type_distribution():
+                print(f"  {row['message_type']}: {row['count']:,}")
+        else:
+            importer.create_tables(drop_existing=args.drop_tables)
+            importer.import_file(
+                args.itch_file,
+                batch_size=args.batch_size,
+                max_messages=args.max_messages,
+                track_order_refs=not args.no_track_refs
+            )
 
     finally:
         importer.close()
