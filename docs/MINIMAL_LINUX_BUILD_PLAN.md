@@ -490,7 +490,7 @@ cd dma_ip_drivers/XDMA/linux-kernel/xdma
 
 # Cross-compile against Buildroot kernel
 # IMPORTANT: The XDMA Makefile uses BUILDSYSTEM_DIR, not KDIR!
-# If you pass KDIR it will be ignored and it will use /lib/modules/$(uname -r)/build
+# If KDIR is passed, it will be ignored and /lib/modules/$(uname -r)/build will be used
 make BUILDSYSTEM_DIR=$KDIR CROSS_COMPILE=$CROSS_COMPILE ARCH=$ARCH
 
 # Verify the module is built for the correct kernel
@@ -541,7 +541,7 @@ WantedBy=multi-user.target
 due to CCCL 3.1.2 API breaking changes.
 
 **Note:** Version 3.2.0 is the current development version on the main branch. The latest
-tagged stable release is v3.1.2, but we use main for latest features and fixes.
+tagged stable release is v3.1.2, but main branch is used for latest features and fixes.
 
 ```bash
 # Clone XGBoost main branch (version 3.2.0-dev)
@@ -730,7 +730,7 @@ Add user creation to post-build.sh (runs in fakeroot):
 ```bash
 # File: /work/tos/trading-linux/buildroot-external/board/trading/post-build.sh
 #!/bin/bash
-# This script runs with fakeroot, so we can modify passwd/group files
+# This script runs with fakeroot, enabling modification of passwd/group files
 
 TARGET_DIR=$1
 
@@ -806,7 +806,7 @@ This isolates cores 4-23 for trading applications, leaving cores 0-3 for OS.
 
 ### 8.2 Systemd Service (Orchestrator)
 
-Project 28 (trading_system_orchestrator) manages all components (P24, P25, P26), so we use a **single systemd service** instead of individual services per project.
+Project 28 (trading_system_orchestrator) manages all components (P24, P25, P26), so a **single systemd service** is used instead of individual services per project.
 
 **CPU affinity is handled by P28's config** (`performance.cpu_affinity`), not systemd. This allows runtime reconfiguration without editing service files.
 
@@ -861,7 +861,7 @@ The orchestrator can drop privileges for child processes if needed.
 
 ## Phase 9: Build Bootable ISO
 
-Buildroot creates `rootfs.iso9660` automatically. You just need to add `grub.cfg` to the overlay.
+Buildroot creates `rootfs.iso9660` automatically. Add `grub.cfg` to the overlay.
 
 ### 9.1 Enable ISO Output in Defconfig
 
@@ -1159,7 +1159,7 @@ This section clarifies the workflow after `make` completes in Buildroot.
 
 ### Buildroot Produces (Phase 1-3)
 
-After running `make` in Buildroot with your external tree, you get:
+After running `make` in Buildroot with the external tree, the following is produced:
 
 ```
 buildroot/output/
@@ -1173,7 +1173,7 @@ buildroot/output/
     └── ...                  # Staged filesystem (for overlay modifications)
 ```
 
-At this point you have a **bootable base system** with kernel + userspace, but
+At this point there is a **bootable base system** with kernel + userspace, but
 **WITHOUT** the proprietary NVIDIA driver, CUDA, or external kernel modules.
 
 ### When Phases 4-6 Execute
@@ -1693,6 +1693,6 @@ curl http://localhost:9094/metrics
 
 ---
 
-**Author**: for Adilson Dias
+**Author**: Adilson Dias
 **Date**: December 2025
 **Target**: Intel i9-14900KF + RTX 5090 + FPGA Trading System

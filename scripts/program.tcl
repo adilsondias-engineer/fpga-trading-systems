@@ -16,7 +16,7 @@ set project_dir [lindex $argv 0]
 set bit_files [glob -nocomplain ${project_dir}/*.runs/impl_1/*.bit]
 if { [llength $bit_files] == 0 } {
     puts "ERROR: No bitstream (.bit) file found in: ${project_dir}/*.runs/impl_1/"
-    puts "Have you run the build script first?"
+    puts "Run the build script first."
     exit 1
 }
 

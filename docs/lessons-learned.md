@@ -510,7 +510,7 @@ ODDR_TXD: ODDR
 
 ###  Key Conceptual Breakthroughs
 
-- "You simulate signals, not physics" - Don't model LED photons or button mechanics
+- "Simulate signals, not physics" - Don't model LED photons or button mechanics
 - "Synthesis is for hardware, simulation is for testing" - Testbenches are not synthesizable
 - "Every async input is a potential failure point" - Never skip synchronizers
 - "Edge detection is a pattern, not a primitive" - Must implement carefully
@@ -1929,7 +1929,7 @@ end if;
 
 ## Project 07 v3: Race Conditions and Async FIFO Architecture
 
-###  The Ultimate Multi-Process Lesson: Sometimes You Must Redesign
+###  The Ultimate Multi-Process Lesson: Sometimes Redesign is Required
 
 **Context:** After successfully implementing 5 ITCH message types (A, E, X, S, R) in v2, encountered persistent race conditions causing message loss and duplication. 20+ debugging attempts failed to fix the fundamental architectural problem.
 
@@ -2218,7 +2218,7 @@ end function;
 
 **Lesson:** "It works on my machine" is prevented by build tracking.
 
-### v3 Architecture Complete - Production Ready
+### v3 Architecture Complete - Completed and Tested on Hardware
 
 **Quality Metrics:**
 - [PASS] Zero race conditions (async FIFO CDC)
@@ -2449,7 +2449,7 @@ Build v048: 17 messages tested - banner + all types working
 
 **Lesson:** Test individual components, then integration, then stress testing.
 
-### v4 Complete - Production Ready for Trading Simulation
+### v4 Complete - Completed and Tested on Hardware for Trading Simulation
 
 **Quality Metrics:**
 - [PASS] 9 message types (complete ITCH subset for order book simulation)
@@ -3089,7 +3089,7 @@ mqtt.connect(CLIENT_ID, MQTT_USER, MQTT_PASS);
 4. **Machine Learning:** Feature generation from live + historical data
 5. **Compliance:** Immutable audit log for regulatory requirements
 
-**Lesson:** Build infrastructure before you need it, if cost is minimal. Gateway publishes to Kafka now, consumers can be added when needed.
+**Lesson:** Build infrastructure before it is needed, if cost is minimal. Gateway publishes to Kafka now, consumers can be added when needed.
 
 ---
 
@@ -3256,7 +3256,7 @@ private void Connect() {
 | MQTT | 5-20ms | ~3% | Broker required |
 | Kafka | 10-50ms | ~5% | Consumer groups |
 
-**Lesson:** For desktop apps on localhost, TCP is simplest and fastest. Only use message brokers if you need their features (persistence, multiple consumers, etc.).
+**Lesson:** For desktop apps on localhost, TCP is simplest and fastest. Only use message brokers if their features are needed (persistence, multiple consumers, etc.).
 
 ---
 
@@ -4133,7 +4133,7 @@ class Sequencer {
 - **XDMA** - DMA engine with AXI-Stream interface, simpler integration
 
 **Solution:** Used XDMA IP for streaming data:
-- AXI-Stream interface matches our packet-based BBO data naturally
+- AXI-Stream interface matches the packet-based BBO data naturally
 - Built-in DMA eliminates need for custom DMA engine
 - H2C (Host to Card) and C2H (Card to Host) channels
 - Interrupt support for completion notification

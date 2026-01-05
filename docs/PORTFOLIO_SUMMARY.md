@@ -14,7 +14,7 @@
 
 **Unique Value Proposition:** 20+ years C++ systems engineering + 17 years active/intermittent futures trading (S&P 500, Nasdaq) + FPGA hardware acceleration + full-stack application development (C++, Java, .NET, IoT).
 
-**Development Achievement:** 29 projects (28 complete), 560+ hours of development, demonstrating end-to-end trading infrastructure from FPGA hardware acceleration to GPU-accelerated ML inference, automated market making strategies, and dedicated control panel UI.
+**Development Achievement:** 30 projects (30 complete), 560+ hours of development, demonstrating end-to-end trading infrastructure from FPGA hardware acceleration to GPU-accelerated ML inference, automated market making strategies, dedicated control panel UI, and custom Linux distribution.
 
 ---
 
@@ -808,7 +808,7 @@ fpga-trading-systems/
 
 ---
 
-**Project Status:** **FUNCTIONAL** - 29 projects (28 complete, 1 in progress) (January 2026)
+**Project Status:** **FUNCTIONAL** - 30 projects (30 complete) (January 2026)
 **Development Time:** 560+ hours
 **System Status:** Fully integrated and operational with NASDAQ ITCH feed (historic data file simulating live feed)
 

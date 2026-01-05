@@ -2,8 +2,8 @@
 ![Language](https://img.shields.io/badge/Language-VHDL-blue)
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
-![Projects](https://img.shields.io/badge/Projects-19%20Complete-brightgreen)
-![Development Time](https://img.shields.io/badge/Development%20Time-400%2B%20hours-blue)
+![Projects](https://img.shields.io/badge/Projects-30%20Complete-brightgreen)
+![Development Time](https://img.shields.io/badge/Development%20Time-560%2B%20hours-blue)
 
 # FPGA Trading Systems
 
@@ -36,9 +36,20 @@ Progressive architecture development from digital design fundamentals to product
 - **Real-time processing:** Sub-microsecond order book updates, hardware BBO tracking
 - **Timing analysis:** XDC constraints, setup/hold violations, critical path optimization
 
+## Repository Structure
+
+This repository uses a symlink-based structure for easy navigation. The main `fpga-trading-systems` folder contains:
+
+- **Source code and documentation:** Core VHDL, C++, scripts, and documentation files
+- **Project symlinks:** All numbered projects (01-30) and related folders are symlinked from the parent directory
+  - Clicking on any project folder (e.g., `03-fifo`, `08-order-book`) opens the external subfolder
+  - Symlinks use relative paths (e.g., `../03-fifo`) for portability
+
+**Note:** Projects are organized by number, with some projects having multiple versions (e.g., `06-udp-parser-mii-v2` through `v5`). The main `fpga-trading-systems` folder serves as the central hub for documentation and shared resources.
+
 ## Project Portfolio
 
-### Core Trading Infrastructure (Projects 6-8)
+### Core Trading Infrastructure (Projects 6-8, 13)
 
 **Project 06: UDP/IP Network Stack**
 - **Achievement:** Production-grade Ethernet packet processing with 100% reliability under stress testing
@@ -235,7 +246,7 @@ Progressive architecture development from digital design fundamentals to product
 - **Technologies:** C++20, fork/exec, signal handling, shared memory (shm_open), Prometheus, nlohmann/json
 - **Status:** Complete, matches original Project 17 vision (full trading loop + metrics + monitoring)
 
-**Project 19: PY32F030 FPGA Status Display** **[COMPLETE]**
+**Project 19: PY32F030 FPGA Status Display** *[COMPLETE]*
 - **Purpose:** External ARM Cortex-M0 microcontroller for FPGA monitoring and configuration via SPI interface
 - **Architecture:** Modular SPI slave (spi_slave_core → spi_register_if → application), 6-register bank, clock domain crossing
 - **Key Innovation:** Heterogeneous system integration—dedicated microcontroller handles slow UI/monitoring while FPGA focuses on ultra-low-latency processing
@@ -256,13 +267,96 @@ Progressive architecture development from digital design fundamentals to product
 - **Technologies:** VHDL (FPGA), C (PY32 firmware), SPI Mode 0, 2-FF CDC synchronizers, BRAM-style register bank
 - **Status:** Functional, SPI register interface complete and validated with 10k message test
 
+### Advanced Hardware Projects (Projects 20-23)
+
+**Project 20: Gigabit Ethernet Order Book (RGMII TX)**
+- **Achievement:** Migration from Arty A7-100T (MII 100 Mbps) to ALINX AX7203 (RGMII Gigabit)
+- **Architecture:** RGMII TX with DDR ODDR primitives, hardware CRC32, reset synchronization
+- **Hardware:** ALINX AX7203 (XC7A200T), Realtek RTL8211E-VB-CG PHY
+- **Performance:** 10× bandwidth improvement, 312 ns ITCH parse → UDP TX (hardware-measured)
+- **Key Innovation:** Proper CDC reset synchronization with 2-stage synchronizer and ASYNC_REG attributes
+- **Status:** Complete, validated with real BBO packets on hardware
+
+**Project 21: PCIe GPU Bridge**
+- **Achievement:** PCIe Gen2 x4 interface for FPGA ↔ CPU ↔ GPU communication
+- **Architecture:** XDMA IP core with C2H/H2C DMA channels, AXI-Lite control registers
+- **Features:** Zero-copy data path to GPU (CUDA pinned memory), bidirectional communication
+- **Technologies:** XDMA IP, PCIe Gen2 x4, AXI-Stream, CUDA integration
+- **Status:** Complete, PCIe link validated
+
+**Project 22: PCIe XDMA Test Pattern Generator**
+- **Achievement:** PCIe Gen2 test pattern generator for XDMA C2H streaming validation
+- **Architecture:** Minimal PCIe design with continuous AXI-Stream test pattern
+- **Purpose:** Driver and host application testing before full trading pipeline integration
+- **Status:** Complete, validated
+
+**Project 23: Order Book with PCIe Gen2 Output**
+- **Achievement:** Complete FPGA trading system with Ethernet ITCH feed and PCIe BBO streaming
+- **Architecture:** RGMII Gigabit Ethernet RX (125 MHz) → ITCH Parser → Order Book (250 MHz) → PCIe Gen2 x1 (250 MHz)
+- **Features:** ITCH 5.0 parsing, hardware order book, BBO extraction, PCIe streaming output
+- **Clock Domains:** RGMII RX (125 MHz), AXI/PCIe (250 MHz) with CDC FIFO
+- **BBO Format:** 48-byte packets with 4-point latency timestamps (T1-T4)
+- **Status:** Complete, end-to-end data path validated
+
+### Advanced Software Projects (Projects 24-26, 28-29)
+
+**Project 24: Order Gateway (Low-Latency PCIe Passthrough)**
+- **Achievement:** Ultra-low-latency PCIe passthrough layer bridging FPGA to trading components
+- **Architecture:** PCIe DMA reader → BBO parser → Disruptor producer
+- **Data Flow:** FPGA Order Book (P23) → PCIe DMA → Parse BBO → Validate → Disruptor → Market Maker (P25)
+- **Performance:** ~0.5 μs Disruptor publish latency
+- **Technologies:** C++20, PCIe (XDMA), LMAX Disruptor, lock-free IPC
+- **Status:** Complete
+
+**Project 25: Market Maker FSM (XGBoost + Strategy)**
+- **Achievement:** Automated market making strategy with GPU-accelerated XGBoost inference
+- **Architecture:** Disruptor consumer → XGBoost GPU predictor → Fair value → Quote generation → Risk management
+- **Features:** XGBoost GPU inference (84% accuracy, ~10-100 μs), prediction-aware trading, position management
+- **Data Flow:** Project 24 → Disruptor → XGBoost → Quote Gen → Project 26
+- **Technologies:** C++20, LMAX Disruptor, XGBoost (CUDA 13.0), spdlog, nlohmann/json
+- **Status:** Complete
+
+**Project 26: Order Execution Engine**
+- **Achievement:** Complete order execution loop with FIX 4.2 protocol and price-time priority matching
+- **Architecture:** Disruptor-based bidirectional communication (orders + fills), matching engine
+- **Data Flow:** Project 25 → Order Ring Buffer → Matching Engine → Fill Ring Buffer → Project 25
+- **Technologies:** C++20, LMAX Disruptor, FIX 4.2 protocol, shared memory IPC
+- **Status:** Complete
+
+**Project 28: Complete Trading System Integration**
+- **Achievement:** System orchestrator integrating Projects 24, 25, 26 into unified production-ready trading system
+- **Architecture:** Process lifecycle management, health monitoring, metrics aggregation, Prometheus exporter
+- **Features:** Single-command startup/shutdown, dependency resolution, graceful resource cleanup
+- **Technologies:** C++20, fork/exec, signal handling, Prometheus, shared memory management
+- **Status:** Complete
+
+**Project 29: TradingOS Control Panel** *[COMPLETE]*
+- **Achievement:** SDL2 DRM/KMS graphical control panel for TradingOS, running directly on framebuffer
+- **Architecture:** Process control, real-time metrics, system log viewer, keyboard navigation
+- **Features:** Start/stop/restart P24-P26, CPU/GPU/memory monitoring, 5120x1440 ultrawide display
+- **Technologies:** C++20, SDL2 DRM/KMS, framebuffer rendering
+- **Status:** Complete
+
+**Project 30: TradingOS - Custom Linux Distribution** *[COMPLETE]*
+- **Achievement:** Minimal Linux distribution optimized for low-latency FPGA trading systems
+- **Architecture:** Buildroot-based custom OS with real-time kernel, CPU isolation, PCIe DMA, GPU acceleration
+- **Features:** 
+  - Real-time kernel (PREEMPT, 1000 Hz tick rate)
+  - CPU isolation (cores 14-23 for trading workloads)
+  - XDMA driver for FPGA PCIe communication
+  - NVIDIA CUDA and XGBoost GPU acceleration
+  - Systemd services for automated trading system startup
+- **Target Hardware:** Intel i9-14900KF, NVIDIA RTX 5090, Xilinx Artix-7 XC7A200T (AX7203)
+- **Technologies:** Buildroot, Linux kernel 6.x, XDMA, NVIDIA driver, CUDA, XGBoost
+- **Status:** Complete - Custom OS built and validated for FPGA trading system deployment
+
 ### Foundation Projects (Projects 1-5)
 
 **Digital Design Fundamentals:**
-1. Rotary Encoder Counter - Quadrature decoding, debouncing, edge detection
+1. Binary Counter with Reset - Clock division, reset synchronization
 2. Button Debouncer - Metastability protection, synchronizer chains
 3. FIFO Buffer - Circular buffer, flow control, full/empty flags
-4. Frequency Generator - Audio feedback, precise timing control
+4. FIFO Hardware - Hardware-verified FIFO implementation
 5. UART Transceiver - Binary protocol framing, checksum validation, 115200 baud
 
 **Skills Demonstrated:** Clock management, state machine design, serial protocols, timing constraints, hardware verification
@@ -384,6 +478,21 @@ All performance metrics and latency measurements in this documentation are based
 **Detailed database information:** See [docs/database.md](docs/database.md) for complete extraction process, message distribution, and data quality validation.
 
 **Video Demonstration:** [Live/Historic NASDAQ ITCH Data Feed to FPGA](https://youtu.be/J0E2pCwZ-QE) - Shows FPGA receiving and processing real NASDAQ ITCH 5.0 market data
+
+## Project Organization
+
+Projects are organized chronologically by development order:
+
+- **Projects 1-5:** Foundation projects (digital design fundamentals)
+- **Projects 6-8, 13:** Core trading infrastructure (Ethernet, ITCH, order book)
+- **Projects 9-12, 14-18:** Application layer (gateways, market maker, execution, monitoring)
+- **Project 19:** Hardware monitoring (PY32F030 SPI interface)
+- **Projects 20-23:** Advanced hardware (Gigabit Ethernet, PCIe integration)
+- **Projects 24-26, 28-30:** Advanced software (PCIe gateway, XGBoost strategy, control panel, custom OS)
+
+**Version Variants:** Some projects have multiple versions (e.g., `06-udp-parser-mii-v2` through `v5`, `07-itch-parser-v2` through `v5`) representing iterative improvements and architectural refinements. The highest version number typically represents the most complete implementation.
+
+**Repository Structure:** This repository uses a symlink-based structure. The main `fpga-trading-systems` folder contains source code, documentation, and symlinks to all numbered projects. Clicking on any project folder (e.g., `03-fifo`, `08-order-book`) opens the external subfolder via relative path symlinks (e.g., `../03-fifo`).
 
 ## Technical Skills
 ### HDL Design & Architecture

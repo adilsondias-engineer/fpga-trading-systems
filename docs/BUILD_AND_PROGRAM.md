@@ -71,7 +71,7 @@ Both scripts include comprehensive error checking:
 
 - **Missing project directory** - Shows usage instructions
 - **No .xpr file found** - Reports error and exits
-- **No bitstream found** - Reminds you to build first
+- **No bitstream found** - Reminder to build first
 - **Hardware not connected** - Shows helpful error message
 - **Build failures** - Reports which stage failed (synthesis/implementation/bitstream)
 
