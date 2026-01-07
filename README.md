@@ -4,7 +4,6 @@
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
 ![Projects](https://img.shields.io/badge/Projects-30%20Complete-brightgreen)
-![Development Time](https://img.shields.io/badge/Development%20Time-A%20Long20%Time%2B%20-blue)
 
 # FPGA Trading Systems
 
