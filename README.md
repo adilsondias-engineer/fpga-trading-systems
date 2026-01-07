@@ -628,7 +628,7 @@ git submodule update --init --recursive
 **Clone individual project (lightweight):**
 ```bash
 git clone https://github.com/adilsondias-engineer/14-cpp-order-gateway.git
-
+```
 ## Technical Skills
 ### HDL Design & Architecture
 
