@@ -24,7 +24,7 @@ From the repository root directory:
 "C:\Xilinx\2025.1\Vivado\bin\vivado.bat" -mode batch -source scripts/build.tcl -tclargs 01-led-blink
 
 # Build project 05
-"C:\Xilinx\2025.1\Vivado\bin\vivado.bat" -mode batch -source scripts/build.tcl -tclargs 05-uart-transmitter
+"C:\Xilinx\2025.1\Vivado\bin\vivado.bat" -mode batch -source scripts/build.tcl -tclargs 05-fpga-uart-transmitter
 
 # Build any numbered project
 "C:\Xilinx\2025.1\Vivado\bin\vivado.bat" -mode batch -source scripts/build.tcl -tclargs 06-next-project
@@ -45,7 +45,7 @@ From the repository root directory:
 "C:\Xilinx\2025.1\Vivado\bin\vivado.bat" -mode batch -source scripts/program.tcl -tclargs 01-led-blink
 
 # Program with project 05 bitstream
-"C:\Xilinx\2025.1\Vivado\bin\vivado.bat" -mode batch -source scripts/program.tcl -tclargs 05-uart-transmitter
+"C:\Xilinx\2025.1\Vivado\bin\vivado.bat" -mode batch -source scripts/program.tcl -tclargs 05-fpga-uart-transmitter
 ```
 
 ## How It Works
@@ -108,6 +108,6 @@ Replace `<project_dir>` with:
 - `02-counter`
 - `03-pwm-led`
 - `04-button-debounce`
-- `05-uart-transmitter`
+- `05-fpga-uart-transmitter`
 - `06-next-project`
 - etc.

@@ -23,7 +23,7 @@ if [ ! -e "/dev/shm/bbo_ring_gateway" ]; then
     fi
 fi
 
-cd /work/projects/fpga-trading-systems/15-market-maker/build
+cd /work/projects/fpga-trading-systems/15-cpp-market-maker/build
 
 echo ""
 echo "Starting Market Maker with:"

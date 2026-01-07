@@ -546,7 +546,7 @@ class LiveTicker {
 
 **Purpose:** Cross-platform mobile BBO terminal for real-time market data
 
-**Status:** [COMPLETE] Complete - See `11-mobile-app/`
+**Status:** [COMPLETE] Complete - See `11-maui-mobile-app/`
 
 **Architecture (.NET MAUI with MQTT):**
 ```csharp
@@ -654,7 +654,7 @@ public class MqttConsumerService : IDisposable
 
 **Purpose:** Automated market making strategy with ultra-low-latency Disruptor IPC and position management
 
-**Status:** [COMPLETE] Complete - See `15-market-maker/`
+**Status:** [COMPLETE] Complete - See `15-cpp-market-maker/`
 
 **Architecture:**
 ```cpp
@@ -761,7 +761,7 @@ When `enable_order_execution=true` in config.json:
 
 **Purpose:** Complete order execution loop with FIX 4.2 protocol and price-time priority matching
 
-**Status:** [COMPLETE] Complete - See `16-order-execution/`
+**Status:** [COMPLETE] Complete - See `16-cpp-order-execution/`
 
 **Architecture:**
 ```cpp

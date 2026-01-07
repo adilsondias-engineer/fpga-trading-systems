@@ -738,33 +738,33 @@ fpga-trading-systems/
 │   ├── lessons-learned.md             # Technical lessons from all projects
 │   └── *.png                          # Screenshots (ESP32, mobile, desktop apps)
 ├── 01-rotary-encoder/                 # Foundation: Quadrature decoding
-├── 02-button-debouncer/               # Foundation: Metastability protection
-├── 03-fifo/                           # Foundation: Flow control, buffering
+├── 02-fpga-button-debouncer/          # Foundation: Metastability protection
+├── 03-fpga-fifo/                      # Foundation: Flow control, buffering
 ├── 04-rotary-encoder-buzzer/          # Foundation: Timing control
-├── 05-uart-transceiver/               # Foundation: Serial protocols
-├── 06-mii-ethernet-udp/               # Core: Network stack (MII/MAC/IP/UDP)
-├── 07-itch-parser/                    # Core: NASDAQ ITCH 5.0 decoder
-├── 08-order-book/                     # Core: Hardware order book + BBO
-├── 09-order-gateway-cpp/              # Application: C++ multi-protocol gateway (UART)
+├── 05-fpga-uart-transmitter/          # Foundation: Serial protocols
+├── 06-fpga-udp-parser-mii/            # Core: Network stack (MII/MAC/IP/UDP)
+├── 07-fpga-itch-parser/               # Core: NASDAQ ITCH 5.0 decoder
+├── 08-fpga-order-book/                # Core: Hardware order book + BBO
+├── 09-cpp-order-gateway/              # Application: C++ multi-protocol gateway (UART)
 ├── 10-esp32-ticker/                   # Application: ESP32 IoT display (Arduino)
-├── 11-mobile-app/                     # Application: .NET MAUI (Android/iOS)
+├── 11-maui-mobile-app/                # Application: .NET MAUI (Android/iOS)
 ├── 12-java-desktop-trading-terminal/  # Application: Java desktop terminal
-├── 13-udp-trasmitter-mii/             # Core: UDP BBO transmitter (MII TX)
-├── 14-order-gateway-cpp/              # Trading: Order Gateway (UDP/XDP kernel bypass)
-├── 15-market-maker/                   # Trading: Market Maker FSM (strategy engine)
-├── 16-order-execution/                # Trading: Order Execution Engine (FIX 4.2)
-├── 17-hardware-timestamping/          # Monitoring: SO_TIMESTAMPING + Prometheus
-├── 18-complete-system/                # Orchestration: System integration + metrics
+├── 13-fpga-udp-transmitter-mii/       # Core: UDP BBO transmitter (MII TX)
+├── 14-cpp-order-gateway/              # Trading: Order Gateway (UDP/XDP kernel bypass)
+├── 15-cpp-market-maker/               # Trading: Market Maker FSM (strategy engine)
+├── 16-cpp-order-execution/            # Trading: Order Execution Engine (FIX 4.2)
+├── 17-cpp-hardware-timestamping/      # Monitoring: SO_TIMESTAMPING + Prometheus
+├── 18-cpp-complete-system/            # Orchestration: System integration + metrics
 ├── 19-py32-fpga-status/               # PY32F030 FPGA Status Display
-├── 20-rgmii-ax7203/                   # Gigabit Ethernet (RGMII TX) on AX7203
-├── 21-pcie-xdma-test/                 # PCIe XDMA IP validation
-├── 22-pcie-eth-test/                  # PCIe + Ethernet integration test
-├── 23-order-book/                     # Order Book with PCIe BBO output
-├── 24-order-gateway/                  # PCIe passthrough (raw BBO to Disruptor)
-├── 25-market-maker/                   # XGBoost GPU + strategy FSM
-├── 26-order-execution/                # Simulated fills via Disruptor
-├── 28-complete-system/                # System orchestrator for P24-P26
-├── 29-trading-ui/                     # SDL2 DRM/KMS control panel (5120x1440)
+├── 20-fpga-order-book/                # Gigabit Ethernet (RGMII TX) on AX7203
+├── 21-fpga-pcie-gpu-bridge/           # PCIe XDMA IP validation
+├── 22-fpga-order-book-pcie/           # PCIe + Ethernet integration test
+├── 23-fpga-order-book/                # Order Book with PCIe BBO output
+├── 24-cpp-order-gateway/               # PCIe passthrough (raw BBO to Disruptor)
+├── 25-cpp-market-maker/                # XGBoost GPU + strategy FSM
+├── 26-cpp-order-execution/            # Simulated fills via Disruptor
+├── 28-cpp-complete-system/            # System orchestrator for P24-P26
+├── 29-cpp-trading-ui/                 # SDL2 DRM/KMS control panel (5120x1440)
 └── build.cmd                          # Universal build automation (Windows)
 ```
 
@@ -783,23 +783,23 @@ fpga-trading-systems/
 **Portfolio Highlights to Review:**
 
 **FPGA Hardware Layer:**
-1. UDP/IP Stack: [06-udp-parser-mii-v5/README.md](../06-udp-parser-mii-v5/README.md) - Production CDC, 100% reliability
-2. ITCH Parser: [07-itch-parser/README.md](../07-itch-parser/README.md) - Async FIFO, gray code synchronization
-3. Order Book: [08-order-book/README.md](../08-order-book/README.md) - BRAM inference, sub-μs latency
-4. UDP TX: [13-udp-trasmitter-mii/README.md](../13-udp-trasmitter-mii/README.md) - SystemVerilog/VHDL integration, timing closure
+1. UDP/IP Stack: [06-fpga-udp-parser-mii-v5/README.md](../06-fpga-udp-parser-mii-v5/README.md) - Production CDC, 100% reliability
+2. ITCH Parser: [07-fpga-itch-parser/README.md](../07-fpga-itch-parser/README.md) - Async FIFO, gray code synchronization
+3. Order Book: [08-fpga-order-book/README.md](../08-fpga-order-book/README.md) - BRAM inference, sub-μs latency
+4. UDP TX: [13-fpga-udp-transmitter-mii/README.md](../13-fpga-udp-transmitter-mii/README.md) - SystemVerilog/VHDL integration, timing closure
 
 **Application Layer:**
-5. C++ Gateway (UART): [09-order-gateway-cpp/README.md](../09-order-gateway-cpp/README.md) - Multi-protocol distribution (10.67 μs)
+5. C++ Gateway (UART): [09-cpp-order-gateway/README.md](../09-cpp-order-gateway/README.md) - Multi-protocol distribution (10.67 μs)
 6. ESP32 IoT: [10-esp32-ticker/README.md](../10-esp32-ticker/README.md) - Arduino + MQTT physical display
-7. Mobile App: [11-mobile-app/README.md](../11-mobile-app/README.md) - .NET MAUI cross-platform
+7. Mobile App: [11-maui-mobile-app/README.md](../11-maui-mobile-app/README.md) - .NET MAUI cross-platform
 8. Java Desktop: [12-java-desktop-trading-terminal/README.md](../12-java-desktop-trading-terminal/README.md) - JavaFX terminal
 
 **Trading System Layer:**
-9. Order Gateway (XDP): [14-order-gateway-cpp/README.md](../14-order-gateway-cpp/README.md) - AF_XDP kernel bypass (0.04 μs)
-10. Market Maker FSM: [15-market-maker/README.md](../15-market-maker/README.md) - Strategy engine with risk controls
-11. Order Execution: [16-order-execution/README.md](../16-order-execution/README.md) - FIX 4.2 protocol + matching engine
-12. Hardware Timestamping: [17-hardware-timestamping/README.md](../17-hardware-timestamping/README.md) - SO_TIMESTAMPING + Prometheus
-13. System Orchestration: [18-complete-system/README.md](../18-complete-system/README.md) - Complete integration + metrics
+9. Order Gateway (XDP): [14-cpp-order-gateway/README.md](../14-cpp-order-gateway/README.md) - AF_XDP kernel bypass (0.04 μs)
+10. Market Maker FSM: [15-cpp-market-maker/README.md](../15-cpp-market-maker/README.md) - Strategy engine with risk controls
+11. Order Execution: [16-cpp-order-execution/README.md](../16-cpp-order-execution/README.md) - FIX 4.2 protocol + matching engine
+12. Hardware Timestamping: [17-cpp-hardware-timestamping/README.md](../17-cpp-hardware-timestamping/README.md) - SO_TIMESTAMPING + Prometheus
+13. System Orchestration: [18-cpp-complete-system/README.md](../18-cpp-complete-system/README.md) - Complete integration + metrics
 
 **Architecture & Documentation:**
 14. System Architecture: [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) - Complete system design

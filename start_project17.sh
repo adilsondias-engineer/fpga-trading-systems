@@ -5,7 +5,7 @@
 
 set -e
 
-PROJECT_DIR="17-hardware-timestamping"
+PROJECT_DIR="17-cpp-hardware-timestamping"
 BUILD_DIR="${PROJECT_DIR}/build"
 EXECUTABLE="timestamp_demo"
 CONFIG_FILE="${PROJECT_DIR}/config.json"

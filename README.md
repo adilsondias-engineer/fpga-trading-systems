@@ -1,9 +1,10 @@
 ![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red)
+![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
 ![Language](https://img.shields.io/badge/Language-VHDL-blue)
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
 ![Projects](https://img.shields.io/badge/Projects-30%20Complete-brightgreen)
-![Development Time](https://img.shields.io/badge/Development%20Time-560%2B%20hours-blue)
+![Development Time](https://img.shields.io/badge/Development%20Time-A%Long%Time%2B%20-blue)
 
 # FPGA Trading Systems
 
@@ -21,9 +22,32 @@ Hardware-accelerated market data processing and order book management for low-la
 
 ## Hardware
 
-- Xilinx Arty A7-100T Development Board
-- Artix-7 FPGA (XC7A100T-1CSG324C)
-- AMD Vivado Design Suite
+### Development Boards
+
+| Board | FPGA | Features | Projects |
+|-------|------|----------|----------|
+| Digilent Arty A7-100T | Artix-7 XC7A100T-1CSG324C | 100 MHz MII Ethernet, UART, GPIO | 1-19 |
+| ALINX AX7203 | Artix-7 XC7A200T-2FBG484I | Gigabit RGMII, PCIe Gen2 x4, DDR3 | 20-23, 30 |
+
+### Arty A7-100T (Foundation Projects)
+- **FPGA:** Artix-7 XC7A100T (101K logic cells, 4.9 Mb BRAM)
+- **Ethernet:** TI DP83848J PHY, MII interface (100 Mbps)
+- **Debug:** USB-UART, 4 LEDs, 4 buttons
+- **Use Case:** Digital design fundamentals, 100 Mbps Ethernet trading pipeline
+
+### ALINX AX7203 (Advanced Projects)
+- **FPGA:** Artix-7 XC7A200T (215K logic cells, 13.1 Mb BRAM)
+- **Ethernet:** Realtek RTL8211E-VB-CG PHY, RGMII interface (1 Gbps)
+- **PCIe:** Gen2 x4 (20 Gbps), XDMA IP for DMA streaming
+- **Memory:** 1 GB DDR3 SDRAM
+- **Debug:** UART, LEDs, user buttons
+- **Use Case:** Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
+
+### Development Tools
+- AMD Vivado Design Suite 2024.x
+- GHDL + GTKWave (simulation)
+- Python/Scapy (packet injection)
+- Windows XDMA driver (PCIe)
 
 ## Technical Focus
 
@@ -38,14 +62,27 @@ Progressive architecture development from digital design fundamentals to product
 
 ## Repository Structure
 
-This repository uses a symlink-based structure for easy navigation. The main `fpga-trading-systems` folder contains:
+This repository uses a Git submodule-based structure for proper GitHub web browsing and version management. The main `fpga-trading-systems` folder contains:
 
 - **Source code and documentation:** Core VHDL, C++, scripts, and documentation files
-- **Project symlinks:** All numbered projects (01-30) and related folders are symlinked from the parent directory
-  - Clicking on any project folder (e.g., `03-fifo`, `08-order-book`) opens the external subfolder
-  - Symlinks use relative paths (e.g., `../03-fifo`) for portability
+- **Project submodules:** All numbered projects (01-30) are included as Git submodules pointing to their respective GitHub repositories
+  - Each project is a separate repository under `adilsondias-engineer/{project-name}`
+  - Clicking on any project folder in GitHub opens the submodule repository
+  - Submodules enable proper version tracking and dependency management
 
-**Note:** Projects are organized by number, with some projects having multiple versions (e.g., `06-udp-parser-mii-v2` through `v5`). The main `fpga-trading-systems` folder serves as the central hub for documentation and shared resources.
+**Cloning the Repository:**
+
+To clone with all submodules:
+```bash
+git clone --recurse-submodules https://github.com/adilsondias-engineer/fpga-trading-systems.git
+```
+
+For existing clones, initialize submodules:
+```bash
+git submodule update --init --recursive
+```
+
+**Note:** Projects are organized by number, with some projects having multiple versions (e.g., `06-fpga-udp-parser-mii-v2` through `v5`). The main `fpga-trading-systems` folder serves as the central hub for documentation and shared resources. All project repositories are private and require appropriate GitHub access.
 
 ## Project Portfolio
 
@@ -490,9 +527,9 @@ Projects are organized chronologically by development order:
 - **Projects 20-23:** Advanced hardware (Gigabit Ethernet, PCIe integration)
 - **Projects 24-26, 28-30:** Advanced software (PCIe gateway, XGBoost strategy, control panel, custom OS)
 
-**Version Variants:** Some projects have multiple versions (e.g., `06-udp-parser-mii-v2` through `v5`, `07-itch-parser-v2` through `v5`) representing iterative improvements and architectural refinements. The highest version number typically represents the most complete implementation.
+**Version Variants:** Some projects have multiple versions (e.g., `06-fpga-udp-parser-mii-v2` through `v5`, `07-fpga-itch-parser-v2` through `v5`) representing iterative improvements and architectural refinements. The highest version number typically represents the most complete implementation.
 
-**Repository Structure:** This repository uses a symlink-based structure. The main `fpga-trading-systems` folder contains source code, documentation, and symlinks to all numbered projects. Clicking on any project folder (e.g., `03-fifo`, `08-order-book`) opens the external subfolder via relative path symlinks (e.g., `../03-fifo`).
+**Repository Structure:** This repository uses a Git submodule-based structure. The main `fpga-trading-systems` folder contains source code, documentation, and Git submodules for all numbered projects. Each project is a separate GitHub repository, enabling proper version tracking and GitHub web browsing. Clone with `--recurse-submodules` to get all projects.
 
 ## Technical Skills
 ### HDL Design & Architecture
