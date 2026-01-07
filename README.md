@@ -4,7 +4,7 @@
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
 ![Projects](https://img.shields.io/badge/Projects-30%20Complete-brightgreen)
-![Development Time](https://img.shields.io/badge/Development%20Time-A%Long%Time%2B%20-blue)
+![Development Time](https://img.shields.io/badge/Development%20Time-A%20Long20%Time%2B%20-blue)
 
 # FPGA Trading Systems
 
@@ -529,7 +529,105 @@ Projects are organized chronologically by development order:
 
 **Version Variants:** Some projects have multiple versions (e.g., `06-fpga-udp-parser-mii-v2` through `v5`, `07-fpga-itch-parser-v2` through `v5`) representing iterative improvements and architectural refinements. The highest version number typically represents the most complete implementation.
 
-**Repository Structure:** This repository uses a Git submodule-based structure. The main `fpga-trading-systems` folder contains source code, documentation, and Git submodules for all numbered projects. Each project is a separate GitHub repository, enabling proper version tracking and GitHub web browsing. Clone with `--recurse-submodules` to get all projects.
+**Repository Structure:** This repository uses a Git submodule-based structure where each project is an independent repository. The main `fpga-trading-systems` folder serves as the central hub with complete documentation and links to all projects.
+
+### Project Repositories (All Projects)
+
+#### Foundation Projects (Digital Design Fundamentals)
+| Project | Repository | Description |
+|---------|------------|-------------|
+| **01** | [fpga-binary-counter-with-reset](https://github.com/adilsondias-engineer/01-fpga-binary-counter-with-reset) | Binary counter, clock division, reset synchronization |
+| **02** | [fpga-button-debouncer](https://github.com/adilsondias-engineer/02-fpga-button-debouncer) | Metastability protection, synchronizer chains |
+| **02.5** | [fpga-button-debouncer](https://github.com/adilsondias-engineer/02.5-fpga-button-debouncer) | Extended testbench validation |
+| **03** | [fpga-fifo](https://github.com/adilsondias-engineer/03-fpga-fifo) | Circular buffer, flow control, full/empty flags |
+| **04** | [fpga-fifo-hardware](https://github.com/adilsondias-engineer/04-fpga-fifo-hardware) | Hardware FIFO implementation |
+| **04B** | [fpga-fifo-hardware](https://github.com/adilsondias-engineer/04B-fpga-fifo-hardware) | Hardware verification |
+| **05** | [fpga-uart-transmitter](https://github.com/adilsondias-engineer/05-fpga-uart-transmitter) | Binary protocol, checksum validation, 115200 baud |
+
+#### Core Trading Infrastructure - Network Stack (Project 6 Evolution)
+| Version | Repository | Status | Key Learning |
+|---------|------------|--------|--------------|
+| **06 RGMII** | [fpga-udp-packet-parser-rgmii](https://github.com/adilsondias-engineer/06-fpga-udp-packet-parser-rgmii) |  Wrong interface | Hardware documentation lesson |
+| **06 MII v1** | [fpga-udp-parser-mii](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii) |  Initial | MII interface basics |
+| **06 MII v2** | [fpga-udp-parser-mii-v2](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii-v2) |  Evolution | Protocol improvements |
+| **06 MII v3** | [fpga-udp-parser-mii-v3](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii-v3) |  Refactor | Architecture changes |
+| **06 MII v3a** | [fpga-udp-parser-mii-v3a](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii-v3a) |  Testing | Intermediate version |
+| **06 MII v3b** | [fpga-udp-parser-mii-v3b](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii-v3b) |  1% success | Event-driven race conditions |
+| **06 MII v4** | [fpga-udp-parser-mii-v4](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii-v4) |  Improving | CDC fixes |
+| **06 MII v5** | [fpga-udp-parser-mii-v5](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii-v5) |  | Final version | Real-time architecture, 100% success |
+
+**Project 6 Journey:** Evolution from wrong interface (RGMII) → event-driven failure (v3b: 1% success) → production-ready real-time architecture (v5: 100% success). Demonstrates systematic debugging and architectural refactoring.
+
+#### Core Trading Infrastructure - ITCH Protocol (Project 7 Evolution)
+| Version | Repository | Features |
+|---------|------------|----------|
+| **07 v1** | [fpga-itch-parser](https://github.com/adilsondias-engineer/07-fpga-itch-parser) | Initial ITCH implementation |
+| **07 v2** | [fpga-itch-parser-v2](https://github.com/adilsondias-engineer/07-fpga-itch-parser-v2) | 5 message types (S, R, A, E, X) |
+| **07 v3** | [fpga-itch-parser-v3](https://github.com/adilsondias-engineer/07-fpga-itch-parser-v3) | Async FIFO, gray code CDC (eliminated race conditions) |
+| **07 v4** | [fpga-itch-parser-v4](https://github.com/adilsondias-engineer/07-fpga-itch-parser-v4) | 9 message types (added D, U, P, Q) |
+| **07 v5** | [fpga-itch-parser-v5](https://github.com/adilsondias-engineer/07-fpga-itch-parser-v5) | Final version (startup banner, complete) |
+
+**Project 7 Journey:** Major v2→v3 refactor eliminated pending flag race conditions using async FIFO with gray code CDC. Code simplified 41% (677→395 lines) while achieving 100% reliability.
+
+#### Core Trading Infrastructure - Order Book & Distribution
+| Project | Repository | Description |
+|---------|------------|-------------|
+| **08** | [fpga-order-book](https://github.com/adilsondias-engineer/08-fpga-order-book) |  **Multi-symbol hardware order book** (8 symbols, 120-170ns latency) |
+| **13** | [fpga-udp-transmitter-mii](https://github.com/adilsondias-engineer/13-fpga-udp-transmitter-mii) |  UDP BBO transmitter (MII TX, SystemVerilog/VHDL integration) |
+
+#### Application Layer - C++ Gateways & Trading Components
+| Project | Repository | Description |
+|---------|------------|-------------|
+| **09** | [cpp-order-gateway](https://github.com/adilsondias-engineer/09-cpp-order-gateway) | Multi-protocol gateway (UART-based, 10.67μs) |
+| **10** | [esp32-ticker](https://github.com/adilsondias-engineer/10-esp32-ticker) | Physical trading floor display (ESP32 + TFT) |
+| **11** | [maui-mobile-app](https://github.com/adilsondias-engineer/11-maui-mobile-app) | Cross-platform mobile app (.NET MAUI + MQTT) |
+| **12** | [java-desktop-trading-terminal](https://github.com/adilsondias-engineer/12-java-desktop-trading-terminal) | Desktop terminal (JavaFX + TCP) |
+| **14** | [cpp-order-gateway](https://github.com/adilsondias-engineer/14-cpp-order-gateway) |  **High-performance gateway** (UDP/XDP/DPDK, 0.04μs with DPDK) |
+| **15** | [cpp-market-maker-fsm](https://github.com/adilsondias-engineer/15-cpp-market-maker-fsm) |  Automated market maker (12.73μs avg) |
+| **16** | [cpp-order-execution](https://github.com/adilsondias-engineer/16-cpp-order-execution) |  FIX 4.2 execution engine (~2μs round-trip) |
+| **17** | [cpp-hardware-timestamping](https://github.com/adilsondias-engineer/17-cpp-hardware-timestamping) |  Latency measurement (SO_TIMESTAMPING) |
+| **18** | [cpp-complete-system](https://github.com/adilsondias-engineer/18-cpp-complete-system) |  **Complete system orchestration** |
+
+#### Hardware Monitoring
+| Project | Repository | Description |
+|---------|------------|-------------|
+| **19** | [py32-fpga-status](https://github.com/adilsondias-engineer/19-py32-fpga-status) |  PY32F030 microcontroller SPI interface (6-register bank) |
+
+#### Advanced Hardware Projects (ALINX AX7203 - Gigabit Ethernet & PCIe)
+| Project | Repository | Description |
+|---------|------------|-------------|
+| **20** | [fpga-order-book](https://github.com/adilsondias-engineer/20-fpga-order-book) |  Gigabit RGMII order book (10× bandwidth, 312ns latency) |
+| **21** | [fpga-pcie-gpu-bridge](https://github.com/adilsondias-engineer/21-fpga-pcie-gpu-bridge) |  PCIe Gen2 x4 bridge (XDMA, CUDA integration) |
+| **22** | [fpga-order-book-pcie](https://github.com/adilsondias-engineer/22-fpga-order-book-pcie) |  Order book with PCIe output |
+| **22 Test** | [fpga-order-book-pcie-eth-test](https://github.com/adilsondias-engineer/22-fpga-order-book-pcie-eth-test) |  PCIe validation infrastructure |
+| **23** | [fpga-order-book](https://github.com/adilsondias-engineer/23-fpga-order-book) |  Complete FPGA system (RGMII RX + PCIe Gen2) |
+
+#### Advanced Software Projects (PCIe Integration & GPU Acceleration)
+| Project | Repository | Description |
+|---------|------------|-------------|
+| **24** | [cpp-order-gateway](https://github.com/adilsondias-engineer/24-cpp-order-gateway) |  PCIe passthrough (~0.5μs Disruptor publish) |
+| **25** | [cpp-market-maker](https://github.com/adilsondias-engineer/25-cpp-market-maker) |  XGBoost GPU inference (84% accuracy, 10-100μs) |
+| **26** | [cpp-order-execution](https://github.com/adilsondias-engineer/26-cpp-order-execution) |  Order execution v2 (FIX 4.2) |
+| **28** | [cpp-complete-system](https://github.com/adilsondias-engineer/28-cpp-complete-system) |  Complete system v2 (P24-P26 orchestration) |
+| **29** | [cpp-trading-ui](https://github.com/adilsondias-engineer/29-cpp-trading-ui) |  SDL2 DRM/KMS control panel |
+| **30** | [custom-linux-trading-os](https://github.com/adilsondias-engineer/30-custom-linux-trading-os) |  TradingOS custom Linux (Buildroot, RT kernel) |
+
+### Cloning Instructions
+
+**Clone with all submodules (recommended for full system):**
+```bash
+git clone --recurse-submodules https://github.com/adilsondias-engineer/fpga-trading-systems.git
+```
+
+**Initialize submodules for existing clone:**
+```bash
+cd fpga-trading-systems
+git submodule update --init --recursive
+```
+
+**Clone individual project (lightweight):**
+```bash
+git clone https://github.com/adilsondias-engineer/14-cpp-order-gateway.git
 
 ## Technical Skills
 ### HDL Design & Architecture
