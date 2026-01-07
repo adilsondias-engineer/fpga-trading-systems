@@ -79,9 +79,9 @@
 [submodule "14-cpp-order-gateway"]
 	path = 14-cpp-order-gateway
 	url = https://github.com/adilsondias-engineer/14-cpp-order-gateway.git
-[submodule "15-cpp-market-maker"]
-	path = 15-cpp-market-maker
-	url = https://github.com/adilsondias-engineer/15-cpp-market-maker.git
+[submodule "15-cpp-market-maker-fsm"]
+	path = 15-cpp-market-maker-fsm
+	url = https://github.com/adilsondias-engineer/15-cpp-market-maker-fsm.git
 [submodule "16-cpp-order-execution"]
 	path = 16-cpp-order-execution
 	url = https://github.com/adilsondias-engineer/16-cpp-order-execution.git
