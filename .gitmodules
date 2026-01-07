@@ -1,0 +1,3 @@
+[submodule "01-fpga-binary-counter-with-reset"]
+	path = 01-fpga-binary-counter-with-reset
+	url = https://github.com/adilsondias-engineer/01-fpga-binary-counter-with-reset.git
