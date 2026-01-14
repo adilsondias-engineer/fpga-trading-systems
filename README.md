@@ -27,7 +27,7 @@ Hardware-accelerated market data processing and order book management for low-la
 |-------|------|----------|----------|
 | Digilent Arty A7-100T | Artix-7 XC7A100T-1CSG324C | 100 MHz MII Ethernet, UART, GPIO | 1-19 |
 | ALINX AX7203 | Artix-7 XC7A200T-2FBG484I | Gigabit RGMII, PCIe Gen2 x4, DDR3 | 20-23, 30 |
-| ALINX AX7325B | Kintex 7 XC7A3257T-2FFG900I | 4x 10Gbe(SFP+)/1x 40Gbe(QSFP+) Gigabit XGMII, PCIe Gen2 x4, DDR3 | 31,32 in development |
+| ALINX AX7325B | Kintex 7 XC7K3257T-2FFG900I | 4x 10Gbe(SFP+)/1x 40Gbe(QSFP+) Gigabit XGMII, PCIe Gen2 x4, DDR3 | 31,32 in development |
 
 <img src="docs/images/my_fpgas.jpeg" alt="My FPGAs" width="1920">
 
@@ -46,7 +46,7 @@ Hardware-accelerated market data processing and order book management for low-la
 - **Use Case:** Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
 - 
 ### ALINX AX7325 (Advanced Projects - comming soon, currently in development)
-- **FPGA:** Kintex 7 XC7A3257T-2FFG900I 
+- **FPGA:** Kintex 7 XC7K3257T-2FFG900I 
 - **Ethernet:** Realtek XXX PHY, XGMII interface (10 Gbps)
 - **PCIe:** Gen2 x8 , XDMA IP for DMA streaming
 - **Memory:** 8 GB DDR3 SDRAM
