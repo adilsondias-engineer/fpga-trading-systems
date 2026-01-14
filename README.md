@@ -29,6 +29,8 @@ Hardware-accelerated market data processing and order book management for low-la
 | ALINX AX7203 | Artix-7 XC7A200T-2FBG484I | Gigabit RGMII, PCIe Gen2 x4, DDR3 | 20-23, 30 |
 | ALINX AX7325B | Kintex 7 XC7A3257T-2FFG900I | 4x 10Gbe(SFP+)/1x 40Gbe(QSFP+) Gigabit XGMII, PCIe Gen2 x4, DDR3 | 31,32 in development |
 
+<img src="docs/images/my_fpgas.jpeg" alt="My FPGAs" width="1920">
+
 ### Arty A7-100T (Foundation Projects)
 - **FPGA:** Artix-7 XC7A100T (101K logic cells, 4.9 Mb BRAM)
 - **Ethernet:** TI DP83848J PHY, MII interface (100 Mbps)
