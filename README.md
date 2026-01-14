@@ -46,9 +46,10 @@ Hardware-accelerated market data processing and order book management for low-la
 - **Use Case:** Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
 - 
 ### ALINX AX7325 (Advanced Projects - comming soon, currently in development)
-- **FPGA:** Kintex 7 XC7K3257T-2FFG900I 
-- **Ethernet:** Realtek XXX PHY, XGMII interface (10 Gbps)
+- **FPGA:** Kintex 7 XC7K3257T-2FFG900I (326K logic cells, 16.0 Mb BRAM, 840 DSP slices)
+- **Ethernet:** Realtek XXX PHY, XGMII interface (10 Gbps) 
 - **PCIe:** Gen2 x8 , XDMA IP for DMA streaming
+ **High-Speed:** 8x GTX transceivers (10.3125 Gbps), SFP+ cage
 - **Memory:** 8 GB DDR3 SDRAM
 - **Debug:** UART, LEDs, user buttons
 - **Use Case:** 10 Gigabit Ethernet ITCH feed, PCIe BBO streaming to host

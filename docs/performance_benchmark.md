@@ -31,7 +31,7 @@ This document presents performance benchmarks for two implementations of the FPG
 - **Network:** Local UDP socket (Project 14) / UART serial @ 115200 baud (Project 9)
 
 ### Software Stack
-- **Language:** C++17
+- **Language:** C++20
 - **Async I/O:** Boost.Asio 1.89+
 - **Build:** Release mode with optimizations
 - **Measurement:** High-resolution clock (`std::chrono::high_resolution_clock`)
