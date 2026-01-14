@@ -27,6 +27,7 @@ Hardware-accelerated market data processing and order book management for low-la
 |-------|------|----------|----------|
 | Digilent Arty A7-100T | Artix-7 XC7A100T-1CSG324C | 100 MHz MII Ethernet, UART, GPIO | 1-19 |
 | ALINX AX7203 | Artix-7 XC7A200T-2FBG484I | Gigabit RGMII, PCIe Gen2 x4, DDR3 | 20-23, 30 |
+| ALINX AX7325B | Kintex 7 XC7A3257T-2FFG900I | 4x 10Gbe(SFP+)/1x 40Gbe(QSFP+) Gigabit XGMII, PCIe Gen2 x4, DDR3 | 31,32 in development |
 
 ### Arty A7-100T (Foundation Projects)
 - **FPGA:** Artix-7 XC7A100T (101K logic cells, 4.9 Mb BRAM)
@@ -41,9 +42,17 @@ Hardware-accelerated market data processing and order book management for low-la
 - **Memory:** 1 GB DDR3 SDRAM
 - **Debug:** UART, LEDs, user buttons
 - **Use Case:** Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
-
+- 
+### ALINX AX7325 (Advanced Projects - comming)
+- **FPGA:** Kintex 7 XC7A3257T-2FFG900I 
+- **Ethernet:** Realtek XXX PHY, XGMII interface (10 Gbps)
+- **PCIe:** Gen2 x8 , XDMA IP for DMA streaming
+- **Memory:** 8 GB DDR3 SDRAM
+- **Debug:** UART, LEDs, user buttons
+- **Use Case:** 10 Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
+- 
 ### Development Tools
-- AMD Vivado Design Suite 2024.x
+- AMD Vivado Design Suite 2024.x,2025.x
 - GHDL + GTKWave (simulation)
 - Python/Scapy (packet injection)
 - Windows XDMA driver (PCIe)
