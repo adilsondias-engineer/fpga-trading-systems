@@ -45,7 +45,7 @@ Hardware-accelerated market data processing and order book management for low-la
 - **Debug:** UART, LEDs, user buttons
 - **Use Case:** Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
 - 
-### ALINX AX7325 (Advanced Projects - comming)
+### ALINX AX7325 (Advanced Projects - comming soon, currently in development)
 - **FPGA:** Kintex 7 XC7A3257T-2FFG900I 
 - **Ethernet:** Realtek XXX PHY, XGMII interface (10 Gbps)
 - **PCIe:** Gen2 x8 , XDMA IP for DMA streaming
