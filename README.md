@@ -1,4 +1,4 @@
-![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red)
+![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red) ![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Kintex--7-blue)
 ![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
 ![Language](https://img.shields.io/badge/Language-VHDL-blue)
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
