@@ -787,20 +787,23 @@ This is not a latency measurement (different clock domains) but indicates the CD
 - `simple_top.vhd`: Pass `cycle_counter_125` to ethernet_top
 - `bbo_payload_source.vhd`: 44-byte payload with T1-T4 timestamps
 
-**BBO Packet Format (44 bytes):**
+**BBO Packet Format (56 bytes with magic header):**
 
 | Offset | Size | Field | Description |
 |--------|------|-------|-------------|
-| 0-7 | 8 | Symbol | Stock ticker (ASCII, space-padded) |
-| 8-11 | 4 | Bid Price | Best bid (big-endian, 4 decimal places) |
-| 12-15 | 4 | Bid Size | Bid shares (big-endian) |
-| 16-19 | 4 | Ask Price | Best ask (big-endian, 4 decimal places) |
-| 20-23 | 4 | Ask Size | Ask shares (big-endian) |
-| 24-27 | 4 | Spread | Ask - Bid (big-endian, 4 decimal places) |
-| 28-31 | 4 | T1 | ITCH parse START (125 MHz cycle count) |
-| 32-35 | 4 | T2 | ITCH parse COMPLETE (125 MHz cycle count) |
-| 36-39 | 4 | T3 | bbo_fifo read (125 MHz cycle count) |
-| 40-43 | 4 | T4 | UDP TX start (125 MHz cycle count) |
+| 0-3 | 4 | Magic Header | 0xBB0BB048 (packet sync marker) |
+| 4-7 | 4 | Packet Length | 0x00000038 (56 bytes) |
+| 8-15 | 8 | Symbol | Stock ticker (ASCII, space-padded) |
+| 16-19 | 4 | Bid Price | Best bid (4 decimal places) |
+| 20-23 | 4 | Bid Size | Bid shares |
+| 24-27 | 4 | Ask Price | Best ask (4 decimal places) |
+| 28-31 | 4 | Ask Size | Ask shares |
+| 32-35 | 4 | Spread | Ask - Bid (4 decimal places) |
+| 36-39 | 4 | T1 | ITCH parse timestamp |
+| 40-43 | 4 | T2 | CDC FIFO write timestamp |
+| 44-47 | 4 | T3 | BBO ready for PCIe (250 MHz cycles) |
+| 48-51 | 4 | T4 | AXI-Stream TX start (250 MHz cycles) |
+| 52-55 | 4 | Reserved | Padding (0x00000000) |
 
 ---
 

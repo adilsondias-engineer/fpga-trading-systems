@@ -508,9 +508,10 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
   3. Multi-Symbol Order Book (8 symbols, 1024 orders each)
   4. BBO Tracker → CDC FIFO → AXI-Stream @ 250 MHz
   5. XDMA → PCIe Gen2 x1 → Host PC
-**BBO Packet Structure (48 bytes):**
-  - Symbol (8B) + Bid/Ask Price (4B each) + Bid/Ask Size (4B each)
-  - Spread (4B) + Timestamps T1-T4 (16B) + Sequence (4B)
+**BBO Packet Structure (56 bytes with magic header):**
+  - Magic Header (4B) + Packet Length (4B) + Symbol (8B)
+  - Bid/Ask Price (4B each) + Bid/Ask Size (4B each)
+  - Spread (4B) + Timestamps T1-T4 (16B) + Reserved (4B)
 **Known Issue:** Spread values may be stale due to BBO scan timing (workaround: calculate on host)
 **Host Tool:** bbo_verify.c reads and validates BBO packets from /dev/xdma0_c2h_0
 **Technologies:** VHDL, AXI-Stream, XDMA, PCIe Gen2, CDC FIFO
@@ -522,7 +523,7 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 **Key Innovation:** Pipeline parallelism—XGBoost moved to P25 so P24 processes next BBO while P25 runs inference
 **Data Flow:**
   1. FPGA (P23) → PCIe C2H DMA → PCIeListener
-  2. 48-byte BBO packets parsed and validated
+  2. 56-byte BBO packets (with magic header) parsed and validated
   3. Raw BBO published to Disruptor shared memory
   4. P25 performs GPU inference in parallel with P24's next PCIe read
 **Performance:**
@@ -537,14 +538,14 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 **Problem Solved:** GPU-accelerated ML inference and automated market making strategy
 **Architecture:** Disruptor Consumer → XGBoostPredictor (GPU) → MarketMakerFSM → OrderProducer → P26
 **Key Innovation:** XGBoost inference runs in P25 for pipeline parallelism with P24's PCIe reads
-**XGBoost Model:** itch_predictor.ubj (36MB, 84% prediction accuracy)
+**XGBoost Model:** itch_predictor.ubj (36MB, 81% prediction accuracy)
 **Features:**
   - XGBoost GPU inference (~10-100 μs on RTX 5090)
   - Fair value calculation with size-weighted mid-price
   - Position-based inventory skew adjustment
   - Real-time PnL tracking (realized + unrealized)
   - Confidence-weighted position sizing from ML predictions
-**FSM States:** IDLE → PREDICT → CALCULATE → QUOTE → RISK_CHECK → ORDER_GEN → WAIT_FILL
+**FSM States:** IDLE → CALCULATE → QUOTE → RISK_CHECK → ORDER_GEN → WAIT_FILL
 **Performance:**
   - XGBoost GPU inference: ~10-100 μs
   - FSM processing: ~1-2 μs
@@ -815,7 +816,7 @@ fpga-trading-systems/
 **New Architecture (Projects 24-29):**
 - PCIe passthrough (P24) + XGBoost GPU inference (P25) for pipeline parallelism
 - End-to-end latency: ~15-107 μs (FPGA → PCIe → GPU → Order)
-- XGBoost prediction accuracy: 84% (vs 70% for LLaMA)
+- XGBoost prediction accuracy: 81% (vs 70% for LLaMA)
 - Data flow: FPGA (P23) → PCIe → P24 (passthrough) → Disruptor → P25 (XGBoost) → P26
 - Pipeline parallelism: P24 processes next BBO while P25 runs GPU inference
 - Control panel: P29 SDL2 DRM/KMS on 5120x1440 ultrawide display

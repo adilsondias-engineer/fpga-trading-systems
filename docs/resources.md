@@ -794,4 +794,4 @@ Key insights: Production HFT systems use software feed handlers + FPGA accelerat
 
 ---
 
-_This resource list grows with each project. Last updated: Project 20 (Gigabit Ethernet Order Book - AX7203 Migration)_
+_This resource list grows with each project. Last updated: Project 29 (TradingOS Control Panel)_

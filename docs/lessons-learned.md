@@ -4151,7 +4151,7 @@ class Sequencer {
 
 **Root Cause:** Hardware limitation or slot configuration. The FPGA/board combination limited to x1.
 
-**Workaround:** Gen2 x1 provides 500 MB/s (5 GT/s), sufficient for BBO packets (48 bytes @ ~10K/sec = 0.5 MB/s).
+**Workaround:** Gen2 x1 provides 500 MB/s (5 GT/s), sufficient for BBO packets (56 bytes @ ~10K/sec = 0.56 MB/s).
 
 **Lesson:** Always verify actual link width with `lspci -vvv`. Design for minimum required bandwidth, not theoretical maximum.
 
@@ -4240,23 +4240,27 @@ type clear_state_t is (CLEAR_IDLE, CLEAR_ACTIVE, CLEAR_DONE);
 
 ### AXI-Stream Packet Formatting
 
-**BBO Packet Structure (48 bytes):**
+**BBO Packet Structure (56 bytes with magic header):**
 ```
-Bytes 0-7:   Symbol (8-char ASCII, padded)
-Bytes 8-11:  Bid Price (32-bit, 4 decimal fixed-point)
-Bytes 12-15: Bid Size (32-bit shares)
-Bytes 16-19: Ask Price (32-bit, 4 decimal fixed-point)
-Bytes 20-23: Ask Size (32-bit shares)
-Bytes 24-27: Spread (32-bit, 4 decimal fixed-point)
-Bytes 28-31: T1 Timestamp (ITCH receive)
-Bytes 32-35: T2 Timestamp (Order book update)
-Bytes 36-39: T3 Timestamp (PCIe queue)
-Bytes 40-43: T4 Timestamp (PCIe transmit)
-Bytes 44-47: Sequence Number
+Bytes 0-3:   Magic Header (0xBB0BB048 - packet sync marker)
+Bytes 4-7:   Packet Length (0x00000038 = 56 bytes)
+Bytes 8-15:  Symbol (8-char ASCII, padded)
+Bytes 16-19: Bid Price (32-bit, 4 decimal fixed-point)
+Bytes 20-23: Bid Size (32-bit shares)
+Bytes 24-27: Ask Price (32-bit, 4 decimal fixed-point)
+Bytes 28-31: Ask Size (32-bit shares)
+Bytes 32-35: Spread (32-bit, 4 decimal fixed-point)
+Bytes 36-39: T1 Timestamp (ITCH receive)
+Bytes 40-43: T2 Timestamp (CDC FIFO write)
+Bytes 44-47: T3 Timestamp (BBO ready for PCIe, 250 MHz)
+Bytes 48-51: T4 Timestamp (AXI-Stream TX start, 250 MHz)
+Bytes 52-55: Reserved (padding)
 ```
 
+**Magic Header:** Enables reliable packet boundary detection in streaming DMA mode. Host reads as uint32_t = 0x48B00BBB (little-endian).
+
 **AXI-Stream Signals:**
-- `tdata[63:0]`: 64-bit data bus (6 beats per packet)
+- `tdata[63:0]`: 64-bit data bus (7 beats per packet with magic header)
 - `tvalid`: Data valid
 - `tready`: Backpressure from XDMA
 - `tlast`: End of packet marker

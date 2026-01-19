@@ -343,16 +343,18 @@ git submodule update --init --recursive
 - **Architecture:** RGMII Gigabit Ethernet RX (125 MHz) → ITCH Parser → Order Book (250 MHz) → PCIe Gen2 x1 (250 MHz)
 - **Features:** ITCH 5.0 parsing, hardware order book, BBO extraction, PCIe streaming output
 - **Clock Domains:** RGMII RX (125 MHz), AXI/PCIe (250 MHz) with CDC FIFO
-- **BBO Format:** 48-byte packets with 4-point latency timestamps (T1-T4)
+- **BBO Format:** 56-byte packets with magic header (0xBB0BB048) + 4-point latency timestamps (T1-T4)
+- **January 2026 Update:** Added magic header for reliable packet synchronization over PCIe DMA
 - **Status:** Complete, end-to-end data path validated
 
 ### Advanced Software Projects (Projects 24-26, 28-29)
 
 **Project 24: Order Gateway (Low-Latency PCIe Passthrough)**
 - **Achievement:** Ultra-low-latency PCIe passthrough layer bridging FPGA to trading components
-- **Architecture:** PCIe DMA reader → BBO parser → Disruptor producer
-- **Data Flow:** FPGA Order Book (P23) → PCIe DMA → Parse BBO → Validate → Disruptor → Market Maker (P25)
-- **Performance:** ~0.5 μs Disruptor publish latency
+- **Architecture:** PCIe DMA reader with magic header sync → BBO parser → Disruptor producer
+- **Data Flow:** FPGA Order Book (P23) → PCIe DMA → Magic Header Sync → Parse BBO → Validate → Disruptor → Market Maker (P25)
+- **Performance:** ~0.5 μs Disruptor publish latency, 0.17-0.31 μs FPGA-side latency (T4-T3)
+- **January 2026 Update:** Updated to 56-byte packet format with magic header synchronization (0x48B00BBB)
 - **Technologies:** C++20, PCIe (XDMA), LMAX Disruptor, lock-free IPC
 - **Status:** Complete
 

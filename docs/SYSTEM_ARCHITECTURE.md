@@ -1445,7 +1445,7 @@ The PCIe architecture implements pipeline parallelism to maximize throughput:
 │  Ethernet RX → UDP/IP → ITCH 5.0 → Order Book → BBO Tracker → PCIe C2H DMA          │
 │   (RGMII)      200 MHz   200 MHz     200 MHz       200 MHz      250 MHz              │
 │                                                                                      │
-│  Output: 48-byte BBO packets (Symbol + Bid/Ask/Spread + 4-point Timestamps)         │
+│  Output: 56-byte BBO packets (Magic Header + Symbol + Bid/Ask/Spread + Timestamps)  │
 └──────────────────────────────────────────────────────────────────────────────────────┘
                                           │
                                           │ PCIe Gen2 x4 (/dev/xdma0_c2h_0)
@@ -1509,9 +1509,15 @@ The PCIe architecture implements pipeline parallelism to maximize throughput:
 **Purpose:** Ultra-low-latency PCIe passthrough from FPGA to downstream processing
 
 **Architecture:**
-- PCIeListener reads BBO from /dev/xdma0_c2h_0
+- PCIeListenerV2 reads 56-byte BBO packets from /dev/xdma0_c2h_0
+- Magic header synchronization (0xBB0BB048) for reliable packet boundaries
 - BBO validation filters corrupted data
 - Disruptor Producer publishes to shared memory
+
+**January 2026 Update:**
+- Updated to 56-byte packet format with magic header
+- Host reads magic header as 0x48B00BBB (little-endian)
+- Packet sync via magic header scanning for reliable DMA streaming
 
 **Design Decision:** XGBoost inference relocated to P25 for pipeline parallelism
 - P24 latency reduced from ~300μs to sub-5μs
