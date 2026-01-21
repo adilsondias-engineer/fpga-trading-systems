@@ -188,7 +188,7 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 **Problem Solved:** Bridge FPGA to diverse application types (desktop, mobile, IoT, analytics)
 **Architecture:** Multi-threaded gateway with UART reader, BBO parser (hex→decimal), three protocol publishers
 **Key Innovation:** Single gateway publishes simultaneously to TCP, MQTT, and Kafka—matching protocol to client requirements
-**Technologies:** C++17 (legacy), Boost.Asio, libmosquitto (MQTT), librdkafka, nlohmann/json
+**Technologies:** C++20 (legacy), Boost.Asio, libmosquitto (MQTT), librdkafka, nlohmann/json
 **Performance:** 10.67 μs avg parse latency, 6.32 μs P50 (UART → protocol)
 **Status:** Functional, superseded by Project 14 (C++20 with XDP)
 
