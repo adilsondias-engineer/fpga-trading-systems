@@ -359,7 +359,7 @@ Partition: hash(symbol) % num_partitions
 ```
 
 **Technologies:**
-- **C++17:** Modern C++ with threading (Project 9 legacy)
+- **C++20** Modern C++ with threading (Project 9 legacy)
 - **Boost.Asio:** Async I/O for TCP/UART
 - **libmosquitto:** MQTT client library
 - **librdkafka:** High-performance Kafka client
