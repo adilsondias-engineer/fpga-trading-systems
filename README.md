@@ -30,7 +30,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34):
 **Performance:** ~50-80ns PHY latency, production-grade quality  
 **Target:** Education, research, small trading firms, hobbyists
 
-[**→ View Source Code**](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | [**→ Documentation**](#10gbe-and-multi-fpga-projects-projects-31-35) | [**→ Commercial Support**](#contact)
+[**→ View Source Code**](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | [**→ Documentation**](#10gbe-and-multi-fpga-projects-projects-31-35) |
 
 
 ## Profile
