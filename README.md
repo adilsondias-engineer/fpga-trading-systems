@@ -1,13 +1,37 @@
-![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red) ![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Kintex--7-blue)
-![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
-![Language](https://img.shields.io/badge/Language-VHDL-blue)
-![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
+![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red) 
+![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Kintex--7-blue)
+![Custom 10GbE](https://img.shields.io/badge/10GBASE--R-Custom%20PHY-gold)
+![No Vendor IP](https://img.shields.io/badge/Vendor%20IP-Zero-success)
+![Open Source](https://img.shields.io/badge/License-Apache%202.0-blue)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
 ![Projects](https://img.shields.io/badge/Projects-35-brightgreen)
+![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
+![Language](https://img.shields.io/badge/Language-VHDL-blue)
 
 # FPGA Trading Systems
 
-Hardware-accelerated market data processing and order book management for low-latency trading systems. Features NASDAQ ITCH 5.0 protocol parsing, hardware order book with sub-microsecond latency, and advanced clock domain crossing architecture.
+Hardware-accelerated market data processing and order book management for low-latency trading systems. Features **custom 10GBASE-R PHY (zero vendor IP)**, NASDAQ ITCH 5.0 protocol parsing, hardware order book with sub-microsecond latency, and advanced clock domain crossing architecture.
+
+---
+
+## Flagship Project: Open-Source 10 Gigabit Ethernet
+
+**The only open-source custom 10GBASE-R Physical Coding Sublayer for trading systems.**
+
+Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34):
+- **64B/66B Encoding** - Full block coding implementation
+- **Scrambler/Descrambler** - Self-synchronizing polynomial (X^58+X^39+1)
+- **Block Lock FSM** - Header-based synchronization state machine
+- **GTX Configuration** - 10.3125 Gbps transceiver control
+- **Multi-Protocol Parser** - NASDAQ ITCH (UDP) + ASX ITCH (TCP)
+- **Hardware Validated** - 30,000+ frames processed, zero vendor IP
+
+**License:** Apache 2.0 (free for commercial use)  
+**Performance:** ~50-80ns PHY latency, production-grade quality  
+**Target:** Education, research, small trading firms, hobbyists
+
+[**→ View Source Code**](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | [**→ Documentation**](#10gbe-and-multi-fpga-projects-projects-31-35) | [**→ Commercial Support**](#contact)
+
 
 ## Profile
 
