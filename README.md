@@ -3,7 +3,7 @@
 ![Language](https://img.shields.io/badge/Language-VHDL-blue)
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
-![Projects](https://img.shields.io/badge/Projects-30%20Complete-brightgreen)
+![Projects](https://img.shields.io/badge/Projects-35-brightgreen)
 
 # FPGA Trading Systems
 
@@ -27,8 +27,7 @@ Hardware-accelerated market data processing and order book management for low-la
 |-------|------|----------|----------|
 | Digilent Arty A7-100T | Artix-7 XC7A100T-1CSG324C | 100 MHz MII Ethernet, UART, GPIO | 1-19 |
 | ALINX AX7203 | Artix-7 XC7A200T-2FBG484I | Gigabit RGMII, PCIe Gen2 x4, DDR3 | 20-23, 30 |
-| ALINX AX7325B | Kintex 7 XC7K3257T-2FFG900I | 4x 10Gbe(SFP+)/1x 40Gbe(QSFP+) Gigabit XGMII, PCIe Gen2 x8, DDR3 | 31,32 in development |
-| Diligent Genesys2 | Kintex 7 XC7K3257T-2FFG900C | 1 Gigabit RGMII, DDR3 |  |
+| ALINX AX7325B | Kintex-7 XC7K325T-2FFG900I | 4x 10GbE (SFP+), XGMII, PCIe Gen2 x8, DDR3 | 31-35 |
 
 <img src="docs/images/my_fpgas.jpeg" alt="My FPGAs" width="1920">
 
@@ -46,15 +45,16 @@ Hardware-accelerated market data processing and order book management for low-la
 - **Debug:** UART, LEDs, user buttons
 - **Use Case:** Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
 - 
-### ALINX AX7325 (Advanced Projects - comming soon, currently in development)
-- **FPGA:** Kintex 7 XC7K3257T-2FFG900I (326K logic cells, 16.0 Mb BRAM, 840 DSP slices)
-- **Ethernet:** Realtek XXX PHY, XGMII interface (10 Gbps) 
-- **PCIe:** Gen2 x8 , XDMA IP for DMA streaming
- **High-Speed:** 8x GTX transceivers (10.3125 Gbps), SFP+ cage
-- **Memory:** 8 GB DDR3 SDRAM
+### ALINX AX7325B (10GbE Projects)
+- **FPGA:** Kintex-7 XC7K325T-2FFG900I (326K logic cells, 16.0 Mb BRAM, 840 DSP slices)
+- **High-Speed:** 8x GTX transceivers (10.3125 Gbps), 4x SFP+ cages
+- **Ethernet:** 10GBASE-R via GTX, XGMII interface (10 Gbps)
+- **PCIe:** Gen2 x8, XDMA IP for DMA streaming
+- **Memory:** DDR3 SODIMM
 - **Debug:** UART, LEDs, user buttons
-- **Use Case:** 10 Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
-- 
+- **Use Case:** 10GbE ITCH market data feed, custom PHY for low-latency inter-FPGA links, multi-FPGA trading appliance
+
+
 ### Development Tools
 - AMD Vivado Design Suite 2024.x,2025.x
 - GHDL + GTKWave (simulation)
@@ -77,7 +77,7 @@ Progressive architecture development from digital design fundamentals to product
 This repository uses a Git submodule-based structure for proper GitHub web browsing and version management. The main `fpga-trading-systems` folder contains:
 
 - **Source code and documentation:** Core VHDL, C++, scripts, and documentation files
-- **Project submodules:** All numbered projects (01-30) are included as Git submodules pointing to their respective GitHub repositories
+- **Project submodules:** All numbered projects (01-35) are included as Git submodules pointing to their respective GitHub repositories
   - Each project is a separate repository under `adilsondias-engineer/{project-name}`
   - Clicking on any project folder in GitHub opens the submodule repository
   - Submodules enable proper version tracking and dependency management
@@ -391,7 +391,7 @@ git submodule update --init --recursive
 **Project 30: TradingOS - Custom Linux Distribution** *[COMPLETE]*
 - **Achievement:** Minimal Linux distribution optimized for low-latency FPGA trading systems
 - **Architecture:** Buildroot-based custom OS with real-time kernel, CPU isolation, PCIe DMA, GPU acceleration
-- **Features:** 
+- **Features:**
   - Real-time kernel (PREEMPT, 1000 Hz tick rate)
   - CPU isolation (cores 14-23 for trading workloads)
   - XDMA driver for FPGA PCIe communication
@@ -400,6 +400,46 @@ git submodule update --init --recursive
 - **Target Hardware:** Intel i9-14900KF, NVIDIA RTX 5090, Xilinx Artix-7 XC7A200T (AX7203)
 - **Technologies:** Buildroot, Linux kernel 6.x, XDMA, NVIDIA driver, CUDA, XGBoost
 - **Status:** Complete - Custom OS built and validated for FPGA trading system deployment
+
+### 10GbE and Multi-FPGA Projects (Projects 31-35)
+
+**Project 31: 10GbE UDP with UART Debug** *[DEVELOPMENT]*
+- **Achievement:** 10 Gigabit Ethernet foundation on Kintex-7 with vendor 10G MAC and UART debug
+- **Architecture:** Xilinx 10G Ethernet Subsystem + ALINX UDP/IP core + UART status reporter
+- **Hardware:** ALINX AX7325B (XC7K325T), GTX 10.3125 Gbps, SFP+ interface
+- **Features:** Loopback/speed test modes, button-controlled mode switching, LED link status
+- **Technologies:** Verilog, Xilinx 10G Ethernet IP, GTX transceivers, UART debug
+
+**Project 32: Open-Source 10GbE (verilog-ethernet)** *[DEVELOPMENT]*
+- **Achievement:** 10GbE implementation using open-source verilog-ethernet library (Forencich)
+- **Architecture:** eth_phy_10g MAC/PHY + GTX wrapper with gearbox (32-bit to 64-bit)
+- **Hardware:** ALINX AX7325B, GTX QPLL at 10.3125 GHz, 156.25 MHz reference clock
+- **Features:** Open-source MAC/PHY, MMCM clock generation, ILA debug integration
+- **Technologies:** Verilog, verilog-ethernet library, GTX transceivers, 64B/66B encoding
+
+**Project 33: Custom 10GBASE-R PHY (VHDL)** *[DEVELOPMENT]*
+- **Achievement:** Complete custom Physical Coding Sublayer implementation without vendor IP
+- **Architecture:** 64B/66B encoder/decoder, self-synchronizing scrambler/descrambler, block lock FSM, direct GTX control
+- **Hardware:** ALINX AX7325B, SFP+ loopback verified, stable block lock (BL:1, ST:7)
+- **Latency Estimate:** ~50-80 ns through PHY (encoder + scrambler + GTX + descrambler + decoder)
+- **Key Innovation:** Full custom PCS allows fine-tuning for minimal latency in inter-FPGA links
+- **Technologies:** Pure VHDL, GTX primitives (GTXE2_COMMON, GTXE2_CHANNEL), IEEE 802.3 Clause 49
+
+**Project 34: TCP ITCH Parser (NASDAQ + ASX Dual-Protocol)** *[HARDWARE VERIFIED]*
+- **Achievement:** Dual-protocol ITCH parser supporting NASDAQ (UDP/MoldUDP64) and ASX (TCP/SoupBinTCP) market data
+- **Architecture:** 10GBASE-R PHY (P33) -> XGMII MAC/IP parser -> Protocol demux -> Dual ITCH parsers -> Message mux -> Aurora TX
+- **Role:** FPGA1 (Network Ingress) in 3-FPGA trading appliance
+- **Hardware Verified:** Full pipeline tested with 1000 NASDAQ ITCH messages via 10GbE SFP+
+- **Features:** TCP segment parser, SoupBinTCP session handler, MoldUDP64 handler, protocol demultiplexer, NASDAQ + ASX ITCH parsing
+- **Technologies:** Pure VHDL, 10GbE XGMII, TCP/UDP protocol stacks, Aurora inter-FPGA link
+
+**Project 35: Standalone 3-FPGA Trading Appliance PCB** *[DESIGN]*
+- **Achievement:** 8-layer PCB design for dedicated 3-FPGA trading appliance (1U half-width)
+- **Architecture:** 3x XC7K325T FPGAs (Network Ingress + Order Book + Strategy), inter-FPGA Aurora links
+- **Board:** 200mm x 180mm, 8-layer controlled impedance, ENIG finish
+- **Features:** 2x SFP+ (10GbE IN/OUT), DDR3 SODIMM (FPGA2), 1GbE management, USB-JTAG (FT2232H), OLED display, PWM fans
+- **Power:** 12V input, ~102W typical (buck converters for VCCINT/VCCAUX/VCCO, LDOs for MGTAVCC/MGTAVTT)
+- **Technologies:** KiCad 8, 8-layer PCB, GTX differential pairs, DDR3 fly-by topology
 
 ### Foundation Projects (Projects 1-5)
 
@@ -540,6 +580,7 @@ Projects are organized chronologically by development order:
 - **Project 19:** Hardware monitoring (PY32F030 SPI interface)
 - **Projects 20-23:** Advanced hardware (Gigabit Ethernet, PCIe integration)
 - **Projects 24-26, 28-30:** Advanced software (PCIe gateway, XGBoost strategy, control panel, custom OS)
+- **Projects 31-35:** 10GbE and multi-FPGA (custom PHY, dual-protocol ITCH, PCB design)
 
 **Version Variants:** Some projects have multiple versions (e.g., `06-fpga-udp-parser-mii-v2` through `v5`, `07-fpga-itch-parser-v2` through `v5`) representing iterative improvements and architectural refinements. The highest version number typically represents the most complete implementation.
 
@@ -626,6 +667,15 @@ Projects are organized chronologically by development order:
 | **29** | [cpp-trading-ui](https://github.com/adilsondias-engineer/29-cpp-trading-ui) |  SDL2 DRM/KMS control panel |
 | **30** | [custom-linux-trading-os](https://github.com/adilsondias-engineer/30-custom-linux-trading-os) |  TradingOS custom Linux (Buildroot, RT kernel) |
 
+#### 10GbE and Multi-FPGA Projects (ALINX AX7325B - Kintex-7)
+| Project | Repository | Description |
+|---------|------------|-------------|
+| **31** | [10gbe-uart-debug](https://github.com/adilsondias-engineer/31-10gbe-uart-debug) | 10GbE UDP with vendor IP + UART debug |
+| **32** | [10gbe-open](https://github.com/adilsondias-engineer/32-10gbe-open) | Open-source 10GbE (verilog-ethernet library) |
+| **33** | [10gbe-phy-custom](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | Custom 10GBASE-R PHY in VHDL (no vendor IP) |
+| **34** | [tcp-itch-parser](https://github.com/adilsondias-engineer/34-tcp-itch-parser) | Dual-protocol ITCH parser (NASDAQ UDP + ASX TCP) |
+| **35** | [standalone-appliance-pcb](https://github.com/adilsondias-engineer/35-standalone-appliance-pcb) | 3-FPGA trading appliance PCB (KiCad, 8-layer) |
+
 ### Cloning Instructions
 
 **Clone with all submodules (recommended for full system):**
@@ -662,8 +712,13 @@ git clone https://github.com/adilsondias-engineer/14-cpp-order-gateway.git
 ### Network Protocol Implementation
 
 - **Ethernet/MII:** Physical layer reception (4-bit nibbles), preamble/SFD detection, MAC frame parsing with address filtering
+- **10GbE/XGMII:** 64-bit word-based MAC parsing at 156.25 MHz, wire-speed payload extraction
+- **10GBASE-R PCS:** Custom 64B/66B encoder/decoder, self-synchronizing scrambler (X^58+X^39+1), block lock FSM
+- **GTX Transceivers:** QPLL configuration (10.3125 GHz), gearbox control, direct GTXE2 primitive instantiation
 - **UDP/IP Stack:** IP header validation, UDP datagram extraction, checksum verification
+- **TCP Parsing:** Header extraction, sequence number tracking, flags/options handling
 - **ITCH 5.0 Protocol:** Big-endian field extraction, 9 message types, order lifecycle tracking
+- **MoldUDP64/SoupBinTCP:** Session layer handlers for NASDAQ (UDP) and ASX (TCP) market data
 - **Real-time Parsing:** Position-based state machine triggering for deterministic latency (vs event-driven approaches)
 - **Binary Protocols:** Frame synchronization, length-prefixed messages, checksum validation
 
@@ -680,6 +735,7 @@ git clone https://github.com/adilsondias-engineer/14-cpp-order-gateway.git
 - **Vivado Flow:** Synthesis, implementation, bitstream generation, timing analysis
 - **Constraint Management:** XDC pin assignments, timing constraints, false path declarations
 - **Hardware Integration:** TI DP83848J Ethernet PHY (MII), USB-UART bridge, quadrature encoders, GPIO
+- **PCB Design:** KiCad 8, 8-layer controlled impedance stackup, GTX differential pair routing, DDR3 fly-by topology
 - **Version Control:** Structured Git workflow with build versioning
 - **Automated Build System:** TCL-based universal build scripts with version tracking
 

@@ -127,3 +127,18 @@
 [submodule "30-custom-linux-trading-os"]
 	path = 30-custom-linux-trading-os
 	url = https://github.com/adilsondias-engineer/30-custom-linux-trading-os.git
+[submodule "31-10gbe-uart-debug"]
+	path = 31-10gbe-uart-debug
+	url = https://github.com/adilsondias-engineer/31-10gbe-uart-debug.git
+[submodule "32-10gbe-open"]
+	path = 32-10gbe-open
+	url = https://github.com/adilsondias-engineer/32-10gbe-open.git
+[submodule "33-10gbe-phy-custom"]
+	path = 33-10gbe-phy-custom
+	url = https://github.com/adilsondias-engineer/33-10gbe-phy-custom.git
+[submodule "34-tcp-itch-parser"]
+	path = 34-tcp-itch-parser
+	url = https://github.com/adilsondias-engineer/34-tcp-itch-parser.git
+[submodule "35-standalone-appliance-pcb"]
+	path = 35-standalone-appliance-pcb
+	url = https://github.com/adilsondias-engineer/35-standalone-appliance-pcb.git

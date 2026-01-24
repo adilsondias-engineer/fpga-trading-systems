@@ -77,6 +77,54 @@ Comprehensive list of documentation, datasheets, specifications, and tools used 
 
 **See Also:** [AX7203 Full Specifications](AX7203_SPECS.md)
 
+### ALINX AX7325B (Projects 31-35)
+
+**Official Documentation:**
+
+- [AX7325B Product Page](https://www.en.alinx.com/) - Board overview and features
+
+**Board Features:**
+
+- FPGA: Xilinx Kintex-7 XC7K325T-2FFG900I
+- Clock: 200 MHz LVDS system, 156.25 MHz GTX reference (on-board oscillator)
+- Memory: 1 GB DDR3 (64-bit), 16 MB QSPI Flash
+- USB: UART bridge (CP2102)
+- Ethernet: **2× 10GbE SFP+** (via GTX transceivers)
+- GTX: 16× transceivers (up to 12.5 Gb/s per channel), 4 quads
+- PCIe: Gen2 ×8 interface
+- Expansion: FMC-HPC connector
+- Form Factor: Standalone board
+
+**Comparison with AX7203:**
+
+| Feature | AX7203 (Artix-7) | AX7325B (Kintex-7) |
+|---------|-------------------|---------------------|
+| FPGA | XC7A200T | XC7K325T |
+| Logic Cells | 215,360 | **326,080 (1.5×)** |
+| Block RAM | 365 (13.14 Mb) | **445 (16.02 Mb)** |
+| DSP Slices | 740 | **840** |
+| Transceivers | 4 GTP (6.6 Gb/s) | **16 GTX (12.5 Gb/s)** |
+| Ethernet | RGMII Gigabit | **10GbE SFP+** |
+| DDR3 | 1 GB (32-bit) | **1 GB (64-bit)** |
+
+**See Also:** [AX7325B Full Specifications](AX7325B_SPECS.md)
+
+### 10GbE Test Hardware (Projects 33-34)
+
+Most developers will not have 10GbE networking at home. This project was verified using a dedicated fiber-optic test setup. **DAC cables did not work** with the AX7325B SFP+ cage.
+
+| Component | Product | Specs |
+|-----------|---------|-------|
+| SFP+ Modules | 10G SFP+ Fiber Transceiver | SR MM850nm, 300m range, Duplex LC |
+| Fiber Cable | Tunghey OM3 LC to LC Patch Cable | Multimode Duplex 50/125um, 15M, LS-ZH |
+| 10GbE Switch | Binardat 8-Port 10G Managed Switch | 4x10G RJ45 + 4x10G SFP+, 160Gbps, L3 |
+| PC NIC | Binardat 10G PCIe Network Adapter | Aquantia AQC107 chip, RJ45, PXE support |
+
+**Test Topology:**
+```
+PC (AQC107 10G NIC, RJ45) <--Cat6a--> Binardat Switch <--OM3 Fiber + SFP+--> AX7325B FPGA
+```
+
 ### Xilinx FPGA
 
 **User Guides:**
@@ -118,6 +166,12 @@ Comprehensive list of documentation, datasheets, specifications, and tools used 
   - Maximum frequencies
   - Power consumption
   - Package pinouts
+
+- [DS182: Kintex-7 FPGAs Data Sheet](https://docs.amd.com/v/u/en-US/ds182_Kintex_7_Data_Sheet)
+  - GTX transceiver specifications (12.5 Gb/s)
+  - DC/AC characteristics
+  - Power consumption per rail (VCCINT, MGTAVCC, MGTAVTT)
+  - FFG900 package pinout
 
 ---
 
@@ -387,7 +441,7 @@ pip install scapy
 ### Git Repository Structure
 
 ```
-fpga-learning/
+fpga-trading-systems/
 ├── .gitignore           # Vivado files, temp files
 ├── README.md            # Portfolio overview
 ├── context.txt          # Context restoration (git ignored)
@@ -414,6 +468,7 @@ fpga-learning/
 *.runs/
 *.sim/
 *.tmp/
+*.dcp
 .Xil/
 *.wdb
 *.vcd
@@ -681,12 +736,12 @@ fpga-learning/
 
 **Value for This Project:**
 These videos validate the architectural decisions made in Projects 6-16:
-- ✅ Event-driven architecture (Disruptor pattern in Projects 14-15)
-- ✅ Hardware acceleration (FPGA feed parsing in Projects 6-8)
-- ✅ Kernel bypass (AF_XDP in Project 14)
-- ✅ Lock-free IPC (Disruptor in Projects 14-15)
-- ✅ Market-making logic (Project 15 FSM)
-- ✅ Order execution pipeline (Project 16)
+- Event-driven architecture (Disruptor pattern in Projects 14-15)
+- Hardware acceleration (FPGA feed parsing in Projects 6-8)
+- Kernel bypass (AF_XDP in Project 14)
+- Lock-free IPC (Disruptor in Projects 14-15)
+- Market-making logic (Project 15 FSM)
+- Order execution pipeline (Project 16)
 
 Key insights: Production HFT systems use software feed handlers + FPGA acceleration (flexible), while this project uses FPGA feed handler (faster but less flexible). This project achieves **312 ns** latency (4-point hardware-measured), competitive for most trading strategies.
 
@@ -794,4 +849,54 @@ Key insights: Production HFT systems use software feed handlers + FPGA accelerat
 
 ---
 
-_This resource list grows with each project. Last updated: Project 29 (TradingOS Control Panel)_
+## 10GbE and Multi-FPGA Resources (Projects 31-35)
+
+### 10GBASE-R PHY Implementation
+
+**Key References:**
+- [UG476: 7 Series GTX/GTH Transceivers](https://docs.amd.com/r/en-US/ug476_7Series_Transceivers) - GTX configuration, gearbox, QPLL
+- [IEEE 802.3-2018 Clause 49](https://standards.ieee.org/ieee/802.3/7071/) - 10GBASE-R PCS specification
+- [verilog-ethernet Library](https://github.com/alexforencich/verilog-ethernet) - Reference implementation (Forencich)
+- [PG157: 10G/25G Ethernet Subsystem](https://docs.xilinx.com/r/en-US/pg157-axi-10g-eth-subsystem) - Xilinx vendor IP reference
+
+**10GBASE-R Implementation Lessons:**
+- GTX serializes TXDATA[0] first (LSB-first); IEEE 802.3 scrambler also operates LSB-first
+- TXSEQUENCE counter must cycle 0 -> 32 -> 0 (33 values for 64B/66B gearbox)
+- TXGEARBOXREADY indicates when GTX actually latches data (not every cycle)
+- Block lock FSM requires edge detection on rx_datavalid for 64-bit gearbox mode
+- Self-synchronizing descrambler polynomial: G(X) = 1 + X^39 + X^58
+
+### Multi-FPGA Inter-Connect
+
+**Aurora Protocol:**
+- GTX-based point-to-point links (10.3125 Gbps per lane)
+- 64B/66B encoding for clock recovery
+- Low-latency alternative to Ethernet for inter-FPGA communication
+
+### Market Data Session Layers
+
+**MoldUDP64 (NASDAQ):**
+- Session ID (10B) + Sequence Number (8B) + Message Count (2B) + Messages
+- Each message: Length (2B) + ITCH payload
+- Gap detection via sequence number tracking
+
+**SoupBinTCP (ASX):**
+- TCP-based session layer with heartbeat management
+- Packet Length (2B) + Packet Type (1B) + Payload
+- Types: Login Accepted (A), Heartbeat (H), Sequenced Data (S), End of Session (Z)
+
+### PCB Design Resources
+
+**Design Tools:**
+- [KiCad 9](https://www.kicad.org/) - Open-source PCB design suite (also using EasyEDA for component library access via LCSC)
+- [Saturn PCB Toolkit](http://www.saturnpcb.com/) - Impedance and stackup calculator
+
+**High-Speed Design:**
+- [SFF-8431: SFP+ Specification](https://www.snia.org/technology-focus/networking) - SFP+ cage pinout and electrical requirements
+- JEDEC DDR3 SDRAM Standard - DDR3 SODIMM interface timing
+- 100 ohm differential impedance for GTX pairs
+- Length matching: +/- 5 mils within differential pair
+
+---
+
+_This resource list grows with each project. Last updated: Project 35 (3-FPGA Trading Appliance PCB)_
