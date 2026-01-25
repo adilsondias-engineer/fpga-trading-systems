@@ -449,8 +449,8 @@ git submodule update --init --recursive
 - **Key Innovation:** Full custom PCS allows fine-tuning for minimal latency in inter-FPGA links
 - **Technologies:** Pure VHDL, GTX primitives (GTXE2_COMMON, GTXE2_CHANNEL), IEEE 802.3 Clause 49
 
-**Project 34: TCP ITCH Parser (NASDAQ + ASX Dual-Protocol)** *[HARDWARE VERIFIED]*
-- **Achievement:** Dual-protocol ITCH parser supporting NASDAQ (UDP/MoldUDP64) and ASX (TCP/SoupBinTCP) market data
+**Project 34: TCP ITCH Parser (NASDAQ + ASX Multi-Protocol)** *[DEVELOPMENT]* *[HARDWARE VERIFIED]*
+- **Achievement:** Multi-protocol ITCH parser supporting NASDAQ (UDP/MoldUDP64), ASX (TCP/SoupBinTCP) , and B3 Brazilian Exchange (UDP/SBE)(comning soon) market data
 - **Architecture:** 10GBASE-R PHY (P33) -> XGMII MAC/IP parser -> Protocol demux -> Dual ITCH parsers -> Message mux -> Aurora TX
 - **Role:** FPGA1 (Network Ingress) in 3-FPGA trading appliance
 - **Hardware Verified:** Full pipeline tested with 1000 NASDAQ ITCH messages via 10GbE SFP+
