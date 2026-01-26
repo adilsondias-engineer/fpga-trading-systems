@@ -604,7 +604,7 @@ Projects are organized chronologically by development order:
 - **Project 19:** Hardware monitoring (PY32F030 SPI interface)
 - **Projects 20-23:** Advanced hardware (Gigabit Ethernet, PCIe integration)
 - **Projects 24-26, 28-30:** Advanced software (PCIe gateway, XGBoost strategy, control panel, custom OS)
-- **Projects 31-35:** 10GbE and multi-FPGA (custom PHY, dual-protocol ITCH, PCB design)
+- **Projects 31-35:** 10GbE and multi-FPGA (custom PHY, multi-protocol ITCH/SBE, PCB design)
 
 **Version Variants:** Some projects have multiple versions (e.g., `06-fpga-udp-parser-mii-v2` through `v5`, `07-fpga-itch-parser-v2` through `v5`) representing iterative improvements and architectural refinements. The highest version number typically represents the most complete implementation.
 
