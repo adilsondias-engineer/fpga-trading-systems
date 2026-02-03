@@ -15,7 +15,7 @@
 
 **Unique Value Proposition:** 20+ years C++ systems engineering + 17 years active/intermittent futures trading (S&P 500, Nasdaq) + FPGA hardware acceleration + full-stack application development (C++, Java, .NET, IoT).
 
-**Development Achievement:** 35 projects, 600+ hours of development, demonstrating end-to-end trading infrastructure from FPGA hardware acceleration to GPU-accelerated ML inference, 10GbE custom PHY, dual-protocol ITCH parsing, multi-FPGA appliance PCB design, and custom Linux distribution.
+**Development Achievement:** 36 projects, 600+ hours of development, demonstrating end-to-end trading infrastructure from FPGA hardware acceleration to GPU-accelerated ML inference, 10GbE custom PHY, dual-protocol ITCH parsing, multi-FPGA appliance PCB design, custom Linux distribution, and ultra-low-latency DPDK kernel bypass.
 
 ---
 
@@ -205,7 +205,7 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 **Problem Solved:** Bridge FPGA to diverse application types (desktop, mobile, IoT, analytics)
 **Architecture:** Multi-threaded gateway with UART reader, BBO parser (hex→decimal), three protocol publishers
 **Key Innovation:** Single gateway publishes simultaneously to TCP, MQTT, and Kafka—matching protocol to client requirements
-**Technologies:** C++20 (legacy), Boost.Asio, libmosquitto (MQTT), librdkafka, nlohmann/json
+**Technologies:** C++17 (legacy), Boost.Asio, libmosquitto (MQTT), librdkafka, nlohmann/json
 **Performance:** 10.67 μs avg parse latency, 6.32 μs P50 (UART → protocol)
 **Status:** Functional, superseded by Project 14 (C++20 with XDP)
 
@@ -686,6 +686,31 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 **Technologies:** KiCad 8, 8-layer PCB, controlled impedance, DDR3 fly-by topology
 **Status:** DESIGN - Schematic hierarchy complete, component placement in progress
 
+### Project 36: Ultra Low Latency RX (DPDK Kernel Bypass)
+**Problem Solved:** Reduce tail latency (P99) for ultra-low-latency trading applications
+**Architecture:** DPDK poll mode driver → BBO parser → LMAX Disruptor shared memory → Market Maker
+**Key Innovation:** Stripped-down, hyper-optimized version of Project 14 focusing purely on critical path from NIC to shared memory
+**Design Philosophy:**
+  - All distribution removed (Kafka, MQTT, TCP server, CSV logging)
+  - All input methods except DPDK removed (UDP, XDP)
+  - Single-threaded: one polling loop, one core, zero context switches
+  - Zero-allocation hot path with pre-allocated BBO object pool
+  - L1/L2 cache optimized (<256KB working set)
+**Performance Target:**
+  - P99/P50 ratio: <2.5x (down from 5.5x in P14)
+  - P99: 80-100 ns (down from 216 ns in P14)
+  - P50: 35-38 ns (down from 39 ns in P14)
+**Key Optimizations:**
+  - Zero-copy RX with hugepages
+  - Branch prediction hints (likely/unlikely)
+  - RDTSC cycle-accurate timestamps
+  - Prefetch pipeline for next packet
+  - Compile-time calculations (constexpr)
+  - Two-stage warm-up (cache touch + synthetic packets)
+**Data Structure:** BBODataFast (64 bytes, 1 cache line aligned)
+**Technologies:** C++20, DPDK 25.11, LMAX Disruptor, POSIX shared memory, hugepages
+**Status:** NASDAQ ITCH tested and benchmarked; ASX and B3 SBE implementations pending
+
 ---
 
 ## Complete System Architecture
@@ -869,6 +894,7 @@ fpga-trading-systems/
 ├── 33-10gbe-phy-custom/               # Custom 10GBASE-R PHY in VHDL
 ├── 34-tcp-itch-parser/                # Dual-protocol ITCH parser (NASDAQ + ASX)
 ├── 35-standalone-appliance-pcb/       # 3-FPGA trading appliance PCB (KiCad)
+├── 36-ultra-low-latency-rx/           # DPDK kernel bypass (NASDAQ tested, sub-50ns parsing)
 └── build.cmd                          # Universal build automation (Windows)
 ```
 
@@ -912,7 +938,7 @@ fpga-trading-systems/
 
 ---
 
-**Project Status:** 35 projects (January 2026)
+**Project Status:** 36 projects (February 2026)
 **Development Time:** 600+ hours
 **System Status:** Fully integrated and operational with NASDAQ ITCH feed (historic data file simulating live feed)
 
@@ -966,5 +992,5 @@ fpga-trading-systems/
 
 ---
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026
 **Status:** Tested on Arty A7-100T (P1-19), ALINX AX7203 (P20-23, 30), and ALINX AX7325B (P31-35) hardware

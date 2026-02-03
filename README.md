@@ -4,7 +4,7 @@
 ![No Vendor IP](https://img.shields.io/badge/Vendor%20IP-Zero-success)
 ![Open Source](https://img.shields.io/badge/License-Apache%202.0-blue)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
-![Projects](https://img.shields.io/badge/Projects-35-brightgreen)
+![Projects](https://img.shields.io/badge/Projects-36-brightgreen)
 ![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
 ![Language](https://img.shields.io/badge/Language-VHDL-blue)
 
@@ -412,6 +412,15 @@ git submodule update --init --recursive
 - **Technologies:** C++20, SDL2 DRM/KMS, framebuffer rendering
 - **Status:** Complete
 
+**Project 36: Ultra Low Latency RX (DPDK Kernel Bypass)** *[NASDAQ TESTED]*
+- **Achievement:** Hyper-optimized DPDK network handler for BBO data processing with sub-50ns parsing
+- **Architecture:** DPDK poll mode driver → BBO parser → LMAX Disruptor shared memory → Market Maker (P15)
+- **Design Philosophy:** All distribution removed, single-threaded, zero-allocation hot path, L1/L2 cache optimized
+- **Performance Target:** P99/P50 ratio < 2.5x (down from 5.5x in P14), P99 80-100 ns (down from 216 ns)
+- **Key Optimizations:** Zero-copy RX, branch prediction hints, RDTSC timestamps, prefetch pipeline, compile-time calculations
+- **Technologies:** C++20, DPDK 25.11, LMAX Disruptor, POSIX shared memory, hugepages
+- **Status:** NASDAQ ITCH tested and benchmarked; ASX and B3 SBE implementations pending
+
 **Project 30: TradingOS - Custom Linux Distribution** *[COMPLETE]*
 - **Achievement:** Minimal Linux distribution optimized for low-latency FPGA trading systems
 - **Architecture:** Buildroot-based custom OS with real-time kernel, CPU isolation, PCIe DMA, GPU acceleration
@@ -690,6 +699,7 @@ Projects are organized chronologically by development order:
 | **28** | [cpp-complete-system](https://github.com/adilsondias-engineer/28-cpp-complete-system) |  Complete system v2 (P24-P26 orchestration) |
 | **29** | [cpp-trading-ui](https://github.com/adilsondias-engineer/29-cpp-trading-ui) |  SDL2 DRM/KMS control panel |
 | **30** | [custom-linux-trading-os](https://github.com/adilsondias-engineer/30-custom-linux-trading-os) |  TradingOS custom Linux (Buildroot, RT kernel) |
+| **36** | [ultra-low-latency-rx](https://github.com/adilsondias-engineer/36-ultra-low-latency-rx) |  DPDK kernel bypass (NASDAQ tested, sub-50ns parsing) |
 
 #### 10GbE and Multi-FPGA Projects (ALINX AX7325B - Kintex-7)
 | Project | Repository | Description |

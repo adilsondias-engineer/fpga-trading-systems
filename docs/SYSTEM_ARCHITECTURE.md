@@ -1,8 +1,8 @@
 # FPGA Trading System - Complete Architecture & Design
 
-**Date:** January 2026
-**Status:** FUNCTIONAL - PCIe Pipeline + 10GbE Multi-FPGA + Custom PHY + Dual-Protocol ITCH
-**Projects:** 6-35 (Network Stack -> Order Book -> PCIe Bridge -> 10GbE Custom PHY -> Multi-FPGA Appliance)
+**Date:** February 2026
+**Status:** FUNCTIONAL - PCIe Pipeline + 10GbE Multi-FPGA + Custom PHY + Dual-Protocol ITCH + DPDK Ultra-Low-Latency
+**Projects:** 6-36 (Network Stack -> Order Book -> PCIe Bridge -> 10GbE Custom PHY -> Multi-FPGA Appliance -> DPDK Kernel Bypass)
 **Development Time:** 600+ hours
 
 ---
@@ -265,6 +265,36 @@ A complete **low-latency market data processing and distribution system** combin
 
 **Status:** Complete, XDP mode validated with large dataset
 
+#### Project 36: Ultra Low Latency RX (DPDK Kernel Bypass)
+
+**Core Functions:**
+1. **DPDK Poll Mode Driver:** Zero-copy packet reception with hugepages and busy polling
+2. **Optimized BBO Parser:** Branch prediction hints, RDTSC timestamps, prefetch pipeline
+3. **Disruptor Producer:** LMAX Disruptor lock-free ring buffer for ultra-low-latency IPC
+
+**Design Philosophy:** Stripped-down, hyper-optimized version of Project 14
+- All distribution removed (Kafka, MQTT, TCP server, CSV logging)
+- All input methods except DPDK removed (UDP, XDP)
+- Single-threaded: one polling loop, one core, zero context switches
+- Zero-allocation hot path with pre-allocated BBO object pool (1024 entries)
+- L1/L2 cache optimized (<256KB working set)
+
+**Performance Target:**
+- P99/P50 ratio: <2.5x (down from 5.5x in P14)
+- P99: 80-100 ns (down from 216 ns in P14)
+- P50: 35-38 ns (down from 39 ns in P14)
+
+**Key Optimizations:**
+- `likely()`/`unlikely()` branch prediction hints
+- Prefetch next packet while processing current
+- Compile-time calculations (`constexpr double PRICE_MULTIPLIER = 0.0001`)
+- Two-stage warm-up (cache touch + synthetic packets)
+- 64-byte cache-line aligned data structures (BBODataFast)
+
+**Technologies:** C++20, DPDK 25.11, LMAX Disruptor, POSIX shared memory, hugepages
+
+**Status:** NASDAQ ITCH tested and benchmarked; ASX and B3 SBE implementations pending
+
 **Architecture:**
 ```cpp
 class OrderGateway {
@@ -359,7 +389,7 @@ Partition: hash(symbol) % num_partitions
 ```
 
 **Technologies:**
-- **C++20** Modern C++ with threading (Project 9 legacy)
+- **C++17:** Modern C++ with threading (Project 9 legacy)
 - **Boost.Asio:** Async I/O for TCP/UART
 - **libmosquitto:** MQTT client library
 - **librdkafka:** High-performance Kafka client
