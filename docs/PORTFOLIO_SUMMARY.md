@@ -13,7 +13,7 @@
 
 **Complete full-stack FPGA trading system** from hardware acceleration to multi-platform applications. Implements wire-to-application processing with **312 ns FPGA latency** (hardware-measured with 4-point timestamping) + multi-protocol distribution (TCP/MQTT/Kafka) to desktop, mobile, and IoT clients.
 
-**Unique Value Proposition:** 20+ years C++ systems engineering + 17 years active/intermittent futures trading (S&P 500, Nasdaq) + FPGA hardware acceleration + full-stack application development (C++, Java, .NET, IoT).
+**Unique Value Proposition:** 20+ years C++ systems engineering + FPGA hardware acceleration + full-stack application development (C++, Java, .NET, IoT).
 
 **Development Achievement:** 36 projects, 600+ hours of development, demonstrating end-to-end trading infrastructure from FPGA hardware acceleration to GPU-accelerated ML inference, 10GbE custom PHY, dual-protocol ITCH parsing, multi-FPGA appliance PCB design, custom Linux distribution, and ultra-low-latency DPDK kernel bypass.
 
