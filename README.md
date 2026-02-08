@@ -25,13 +25,14 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34):
 - **GTX Configuration** - 10.3125 Gbps transceiver control
 - **Multi-Protocol Parser** - NASDAQ ITCH (UDP) + ASX ITCH (TCP)
 - **Hardware Validated** - 30,000+ frames processed, zero vendor IP
+- **Scaling Path:** 40GBASE-R4 architecture designed (4× 10G lanes, MLD bonding)  
+- **Implementation:** Blocked by test equipment cost, ready to implement with hardware access
 
 **License:** Apache 2.0 (free for commercial use)  
 **Performance:** ~50-80ns PHY latency, production-grade quality  
 **Target:** Education, research, small trading firms, hobbyists
 
 [**→ View Source Code**](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | [**→ Documentation**](#10gbe-and-multi-fpga-projects-projects-31-35) |
-
 
 ## Profile
 
