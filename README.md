@@ -7,7 +7,7 @@
 ![Projects](https://img.shields.io/badge/Projects-36-brightgreen)
 ![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
 ![Language](https://img.shields.io/badge/Language-VHDL-blue)
-
+![40G Design](https://img.shields.io/badge/40GBASE--R4-Design%20Complete-blue)
 # FPGA Trading Systems
 
 Hardware-accelerated market data processing and order book management for low-latency trading systems. Features **custom 10GBASE-R PHY (zero vendor IP)**, NASDAQ ITCH 5.0 protocol parsing, hardware order book with sub-microsecond latency, and advanced clock domain crossing architecture.
