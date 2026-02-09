@@ -83,7 +83,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34):
 - AMD Vivado Design Suite 2024.x,2025.x
 - GHDL + GTKWave (simulation)
 - Python/Scapy (packet injection)
-- Windows XDMA driver (PCIe)
+- Linux XDMA driver (PCIe)
 
 ## Technical Focus
 
