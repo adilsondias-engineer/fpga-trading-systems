@@ -412,7 +412,7 @@ git submodule update --init --recursive
 - **Technologies:** C++20, SDL2 DRM/KMS, framebuffer rendering
 - **Status:** Complete
 
-**Project 36: Ultra Low Latency RX (DPDK Kernel Bypass)** *[NASDAQ TESTED]*
+**Project 36: Ultra Low Latency RX (DPDK Kernel Bypass) BBO Ingress** *[NASDAQ TESTED]*
 - **Achievement:** Hyper-optimized DPDK network handler for BBO data processing with sub-50ns parsing
 - **Architecture:** DPDK poll mode driver → BBO parser → LMAX Disruptor shared memory → Market Maker (P15)
 - **Design Philosophy:** All distribution removed, single-threaded, zero-allocation hot path, L1/L2 cache optimized
