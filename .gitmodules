@@ -142,6 +142,6 @@
 [submodule "35-standalone-appliance-pcb"]
 	path = 35-standalone-appliance-pcb
 	url = https://github.com/adilsondias-engineer/35-standalone-appliance-pcb.git
-[submodule "36-ultra-low-latency-rx"]
-	path = 36-ultra-low-latency-rx
-	url = https://github.com/adilsondias-engineer/36-ultra-low-latency-rx.git
+[submodule "36-cpp-bbo-ingress-low-latency"]
+	path = 36-cpp-bbo-ingress-low-latency
+	url = https://github.com/adilsondias-engineer/36-cpp-bbo-ingress-low-latency.git
