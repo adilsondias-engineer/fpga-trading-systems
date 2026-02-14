@@ -4,7 +4,7 @@
 ![No Vendor IP](https://img.shields.io/badge/Vendor%20IP-Zero-success)
 ![Open Source](https://img.shields.io/badge/License-Apache%202.0-blue)
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
-![Projects](https://img.shields.io/badge/Projects-36-brightgreen)
+![Projects](https://img.shields.io/badge/Projects-38-brightgreen)
 ![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
 ![Language](https://img.shields.io/badge/Language-VHDL-blue)
 ![40G Design](https://img.shields.io/badge/40GBASE--R4-Design%20Complete-blue)
@@ -18,7 +18,7 @@ Hardware-accelerated market data processing and order book management for low-la
 
 **The only open-source custom 10GBASE-R Physical Coding Sublayer for trading systems.**
 
-Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34):
+Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 - **64B/66B Encoding** - Full block coding implementation
 - **Scrambler/Descrambler** - Self-synchronizing polynomial (X^58+X^39+1)
 - **Block Lock FSM** - Header-based synchronization state machine
@@ -29,7 +29,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34):
 - **Implementation:** Blocked by test equipment cost, ready to implement with hardware access
 
 **License:** Apache 2.0 (free for commercial use)  
-**Performance:** ~50-80ns PHY latency, production-grade quality  
+**Performance:** ~50-80ns PHY latency, hardware-validated quality  
 **Target:** Education, research, small trading firms, hobbyists
 
 [**→ View Source Code**](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | [**→ Documentation**](#10gbe-and-multi-fpga-projects-projects-31-35) |
@@ -51,7 +51,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34):
 |-------|------|----------|----------|
 | Digilent Arty A7-100T | Artix-7 XC7A100T-1CSG324C | 100 MHz MII Ethernet, UART, GPIO | 1-19 |
 | ALINX AX7203 | Artix-7 XC7A200T-2FBG484I | Gigabit RGMII, PCIe Gen2 x4, DDR3 | 20-23, 30 |
-| ALINX AX7325B | Kintex-7 XC7K325T-2FFG900I | 4x 10GbE (SFP+), XGMII, PCIe Gen2 x8, DDR3 | 31-35 |
+| ALINX AX7325B | Kintex-7 XC7K325T-2FFG900I | 4x 10GbE (SFP+), XGMII, PCIe Gen2 x8, DDR3 | 31-35, 38 |
 
 <img src="docs/images/my_fpgas.jpeg" alt="My FPGAs" width="1920">
 
@@ -91,7 +91,7 @@ Progressive architecture development from digital design fundamentals to product
 
 - **Low-latency network processing:** MII Ethernet, UDP/IP stack, NASDAQ ITCH 5.0 protocol
 - **Memory architecture:** BRAM-based order storage, price level tables, FIFO buffering
-- **Clock domain crossing:** Production-grade CDC with gray code synchronization
+- **Clock domain crossing:** Hardware-validated CDC with gray code synchronization
 - **State machine design:** Multi-stage FSM pipelines for deterministic latency
 - **Real-time processing:** Sub-microsecond order book updates, hardware BBO tracking
 - **Timing analysis:** XDC constraints, setup/hold violations, critical path optimization
@@ -101,7 +101,7 @@ Progressive architecture development from digital design fundamentals to product
 This repository uses a Git submodule-based structure for proper GitHub web browsing and version management. The main `fpga-trading-systems` folder contains:
 
 - **Source code and documentation:** Core VHDL, C++, scripts, and documentation files
-- **Project submodules:** All numbered projects (01-35) are included as Git submodules pointing to their respective GitHub repositories
+- **Project submodules:** All numbered projects (01-38) are included as Git submodules pointing to their respective GitHub repositories
   - Each project is a separate repository under `adilsondias-engineer/{project-name}`
   - Clicking on any project folder in GitHub opens the submodule repository
   - Submodules enable proper version tracking and dependency management
@@ -125,7 +125,7 @@ git submodule update --init --recursive
 ### Core Trading Infrastructure (Projects 6-8, 13)
 
 **Project 06: UDP/IP Network Stack**
-- **Achievement:** Production-grade Ethernet packet processing with 100% reliability under stress testing
+- **Achievement:** Hardware-validated Ethernet packet processing with 100% reliability under stress testing
 - **Architecture:** MII physical layer, MAC frame parser, IP/UDP protocol stack
 - **Key Innovation:** Real-time byte-by-byte parsing eliminates CDC race conditions (1% → 100% success rate)
 - **Validation:** 1000+ packet stress test, comprehensive XDC timing constraints
@@ -146,7 +146,7 @@ git submodule update --init --recursive
 - **Latency:** Order processing 120-170 ns, BBO update 2.6 μs per symbol
 - **Resources:** 32 RAMB36 tiles (24% utilization), excellent scalability headroom
 - **Spread Calculation:** Real-time ask - bid calculation for risk management
-- **BRAM Implementation:** Production-grade Block RAM inference using Xilinx templates
+- **BRAM Implementation:** Hardware-validated Block RAM inference using Xilinx templates
 - **Debug Methodology:** Comprehensive instrumentation for systematic troubleshooting
 - **Trading Relevance:** Multi-symbol tracking essential for real-world exchange systems
 - **BBO Output:** UART interface with symbol name, bid/ask prices/shares, spread, change detection
@@ -291,7 +291,7 @@ git submodule update --init --recursive
 - **Status:** Complete, measures actual trading path latency with sub-microsecond accuracy
 
 **Project 18: Complete Trading System Integration** *[COMPLETE]**
-- **Purpose:** System orchestrator integrating Projects 17, 14, 15, 16 into unified production-ready trading system
+- **Purpose:** System orchestrator integrating Projects 17, 14, 15, 16 into unified hardware-validated trading system
 - **Architecture:** Process lifecycle management, health monitoring, metrics aggregation, Prometheus exporter
 - **Key Innovation:** Single-command startup/shutdown with dependency resolution and graceful resource cleanup
 - **Components:**
@@ -326,7 +326,7 @@ git submodule update --init --recursive
 - **Features:**
   - **6-register bank:** 4 read-only status inputs (ORDER_COUNT, BBO_COUNT, LATENCY_P50, STATUS) + 2 read-write configuration outputs (SYMBOL_EN, THRESHOLD)
   - **SPI Mode 0** (CPOL=0, CPHA=0), up to 10 MHz tested
-  - **Production-grade timing:** 2-cycle pipeline for register reads, proper setup/hold timing for address byte trailing edge
+  - **Hardware-validated timing:** 2-cycle pipeline for register reads, proper setup/hold timing for address byte trailing edge
   - **Clock domain crossing:** SPI_SCK → 100 MHz via 2-FF synchronizer, metastability protection
   - **Generic architecture:** spi_slave_core reusable across projects, spi_register_if application-specific
 - **PY32F030 Hardware:** ARM Cortex-M0 @ 24 MHz, 64 KB Flash, 8 KB SRAM, SPI master (up to 12 MHz)
@@ -399,7 +399,7 @@ git submodule update --init --recursive
 - **Status:** Complete
 
 **Project 28: Complete Trading System Integration**
-- **Achievement:** System orchestrator integrating Projects 24, 25, 26 into unified production-ready trading system
+- **Achievement:** System orchestrator integrating Projects 24, 25, 26 into unified hardware-validated trading system
 - **Architecture:** Process lifecycle management, health monitoring, metrics aggregation, Prometheus exporter
 - **Features:** Single-command startup/shutdown, dependency resolution, graceful resource cleanup
 - **Technologies:** C++20, fork/exec, signal handling, Prometheus, shared memory management
@@ -421,6 +421,15 @@ git submodule update --init --recursive
 - **Technologies:** C++20, DPDK 25.11, LMAX Disruptor, POSIX shared memory, hugepages
 - **Status:** NASDAQ ITCH tested and benchmarked; ASX and B3 SBE implementations pending
 
+**Project 37: Order Gateway Distribution - BBO Multi-Protocol Gateway** *[COMPLETE]*
+- **Achievement:** BBO distribution gateway reading from shared memory, distributing via TCP, MQTT, and Kafka
+- **Architecture:** Shared memory consumer (LMAX Disruptor) → multi-protocol publisher (TCP/MQTT/Kafka)
+- **Data Flow:** Project 36 (DPDK RX) → Shared Memory → Project 37 (Distribution) → TCP/MQTT/Kafka → Clients
+- **Design Philosophy:** Architecture separation — Project 36 handles ultra-low-latency critical path, Project 37 handles distribution without impacting latency
+- **Features:** JSON BBO output, configurable protocols, optional RT scheduling (SCHED_FIFO), CPU core pinning
+- **Technologies:** C++20, Boost.Asio, libmosquitto (MQTT), librdkafka (Kafka), LMAX Disruptor, nlohmann/json, spdlog
+- **Status:** Complete, pending hardware testing with Project 36 + Project 38
+
 **Project 30: TradingOS - Custom Linux Distribution** *[COMPLETE]*
 - **Achievement:** Minimal Linux distribution optimized for low-latency FPGA trading systems
 - **Architecture:** Buildroot-based custom OS with real-time kernel, CPU isolation, PCIe DMA, GPU acceleration
@@ -434,7 +443,7 @@ git submodule update --init --recursive
 - **Technologies:** Buildroot, Linux kernel 6.x, XDMA, NVIDIA driver, CUDA, XGBoost
 - **Status:** Complete - Custom OS built and validated for FPGA trading system deployment
 
-### 10GbE and Multi-FPGA Projects (Projects 31-35)
+### 10GbE and Multi-FPGA Projects (Projects 31-35, 38)
 
 **Project 31: 10GbE UDP with UART Debug** *[DEVELOPMENT]*
 - **Achievement:** 10 Gigabit Ethernet foundation on Kintex-7 with vendor 10G MAC and UART debug
@@ -474,6 +483,18 @@ git submodule update --init --recursive
 - **Power:** 12V input, ~102W typical (buck converters for VCCINT/VCCAUX/VCCO, LDOs for MGTAVCC/MGTAVTT)
 - **Technologies:** KiCad 8, 8-layer PCB, GTX differential pairs, DDR3 fly-by topology
 
+**Project 38: Order Book 10GbE - FPGA Order Book with UDP TX** *[HARDWARE TESTED]*
+- **Achievement:** Complete on-FPGA order book with 10GbE RX/TX, 8-symbol tracking, and 4-point latency measurement
+- **Architecture:** 10GBASE-R PHY (P33) → ITCH Parser (P34) → 8x Parallel Order Books → BBO Tracker → UDP TX → 10GbE TX
+- **Hardware:** ALINX AX7325B (XC7K325T), SFP+ 10GBASE-R, custom PHY (zero vendor IP)
+- **Clock Domains:** sys_clk 200 MHz (order book), tx_clk 161.13 MHz (network), CDC via XPM async FIFOs
+- **Capacity:** 8 symbols, 1024 orders x 256 price levels per symbol, sub-microsecond order processing
+- **Resources:** 13,605 LUTs (6.7%), 48.5 BRAM tiles (10.9%), 19,684 registers (4.8%)
+- **Timing:** sys_clk WNS +0.640ns, tx_clk WNS +1.008ns, 0 critical warnings
+- **BBO Output:** 44-byte UDP payload with symbol, bid/ask, spread, 4-point FPGA timestamps (T1-T4)
+- **Technologies:** Pure VHDL, 10GBASE-R PCS, XGMII, XPM FIFOs, GTX transceivers
+- **Status:** Hardware tested on AX7325B, 12 bugs found and fixed (documented in README)
+
 ### Foundation Projects (Projects 1-5)
 
 **Digital Design Fundamentals:**
@@ -486,7 +507,7 @@ git submodule update --init --recursive
 **Skills Demonstrated:** Clock management, state machine design, serial protocols, timing constraints, hardware verification
 
 Each project includes:
-- Complete VHDL source with production-grade coding practices
+- Complete VHDL source with hardware-validated coding practices
 - Testbenches with self-checking assertions
 - XDC constraints with timing analysis
 - Hardware validation on Xilinx Arty A7-100T
@@ -614,6 +635,8 @@ Projects are organized chronologically by development order:
 - **Projects 20-23:** Advanced hardware (Gigabit Ethernet, PCIe integration)
 - **Projects 24-26, 28-30:** Advanced software (PCIe gateway, XGBoost strategy, control panel, custom OS)
 - **Projects 31-35:** 10GbE and multi-FPGA (custom PHY, multi-protocol ITCH/SBE, PCB design)
+- **Projects 36-37:** Ultra low-latency software (DPDK kernel bypass, multi-protocol distribution gateway)
+- **Project 38:** 10GbE FPGA order book (8-symbol order book with UDP TX on Kintex-7)
 
 **Version Variants:** Some projects have multiple versions (e.g., `06-fpga-udp-parser-mii-v2` through `v5`, `07-fpga-itch-parser-v2` through `v5`) representing iterative improvements and architectural refinements. The highest version number typically represents the most complete implementation.
 
@@ -644,7 +667,7 @@ Projects are organized chronologically by development order:
 | **06 MII v4** | [fpga-udp-parser-mii-v4](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii-v4) |  Improving | CDC fixes |
 | **06 MII v5** | [fpga-udp-parser-mii-v5](https://github.com/adilsondias-engineer/06-fpga-udp-parser-mii-v5) |  | Final version | Real-time architecture, 100% success |
 
-**Project 6 Journey:** Evolution from wrong interface (RGMII) → event-driven failure (v3b: 1% success) → production-ready real-time architecture (v5: 100% success). Demonstrates systematic debugging and architectural refactoring.
+**Project 6 Journey:** Evolution from wrong interface (RGMII) → event-driven failure (v3b: 1% success) → hardware-validated real-time architecture (v5: 100% success). Demonstrates systematic debugging and architectural refactoring.
 
 #### Core Trading Infrastructure - ITCH Protocol (Project 7 Evolution)
 | Version | Repository | Features |
@@ -699,7 +722,8 @@ Projects are organized chronologically by development order:
 | **28** | [cpp-complete-system](https://github.com/adilsondias-engineer/28-cpp-complete-system) |  Complete system v2 (P24-P26 orchestration) |
 | **29** | [cpp-trading-ui](https://github.com/adilsondias-engineer/29-cpp-trading-ui) |  SDL2 DRM/KMS control panel |
 | **30** | [custom-linux-trading-os](https://github.com/adilsondias-engineer/30-custom-linux-trading-os) |  TradingOS custom Linux (Buildroot, RT kernel) |
-| **36** | [cpp-bbo-ingress-low-latency](https://github.com/adilsondias-engineer/36-cpp-bbo-ingress-low-latency) |  DPDK kernel bypass (NASDAQ tested,sub-50ns parsing, P99/P50 < 2.5x) |
+| **36** | [cpp-bbo-ingress-low-latency](https://github.com/adilsondias-engineer/36-cpp-bbo-ingress-low-latency) |  DPDK kernel bypass (NASDAQ tested, sub-50ns parsing, P99/P50 < 2.5x) |
+| **37** | [order-gateway-distribution](https://github.com/adilsondias-engineer/37-order-gateway-distribution) |  BBO distribution gateway (TCP/MQTT/Kafka from shared memory) |
 
 #### 10GbE and Multi-FPGA Projects (ALINX AX7325B - Kintex-7)
 | Project | Repository | Description |
@@ -709,6 +733,7 @@ Projects are organized chronologically by development order:
 | **33** | [10gbe-phy-custom](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | Custom 10GBASE-R PHY in VHDL (no vendor IP) |
 | **34** | [tcp-itch-parser](https://github.com/adilsondias-engineer/34-tcp-itch-parser) | Dual-protocol ITCH parser (NASDAQ UDP + ASX TCP) |
 | **35** | [standalone-appliance-pcb](https://github.com/adilsondias-engineer/35-standalone-appliance-pcb) | 3-FPGA trading appliance PCB (KiCad, 8-layer) |
+| **38** | [order-book-10gbe](https://github.com/adilsondias-engineer/38-order-book-10gbe) |  FPGA order book with 10GbE UDP TX (8 symbols, WNS +0.640ns) |
 
 ### Cloning Instructions
 

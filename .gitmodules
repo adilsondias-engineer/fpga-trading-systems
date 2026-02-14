@@ -147,7 +147,7 @@
 	url = https://github.com/adilsondias-engineer/36-cpp-bbo-ingress-low-latency.git
 [submodule "37-cpp-order-gateway-distribution"]
 	path = 37-cpp-order-gateway-distribution
-	url = https://github.com/adilsondias-engineer/37-cpp-order-gateway-distribution
+	url = https://github.com/adilsondias-engineer/37-cpp-order-gateway-distribution.git	
 [submodule "38-fpga-order-book-10gbe"]
 	path = 38-fpga-order-book-10gbe
-	url = https://github.com/adilsondias-engineer/38-fpga-order-book-10gbe.git
+	url = https://github.com/adilsondias-engineer/38-fpga-order-book-10gbe.git	
