@@ -133,15 +133,21 @@
 [submodule "32-10gbe-open"]
 	path = 32-10gbe-open
 	url = https://github.com/adilsondias-engineer/32-10gbe-open.git
-[submodule "33-10gbe-phy-custom"]
-	path = 33-10gbe-phy-custom
-	url = https://github.com/adilsondias-engineer/33-10gbe-phy-custom.git
-[submodule "34-tcp-itch-parser"]
-	path = 34-tcp-itch-parser
-	url = https://github.com/adilsondias-engineer/34-tcp-itch-parser.git
-[submodule "35-standalone-appliance-pcb"]
-	path = 35-standalone-appliance-pcb
-	url = https://github.com/adilsondias-engineer/35-standalone-appliance-pcb.git
+[submodule "33-fpga-10gbe-phy-custom"]
+	path = 33-fpga-10gbe-phy-custom
+	url = https://github.com/adilsondias-engineer/33-fpga-10gbe-phy-custom.git
+[submodule "34-fpga-tcp-itch-parser"]
+	path = 34-fpga-tcp-itch-parser
+	url = https://github.com/adilsondias-engineer/34-fpga-tcp-itch-parser.git
+[submodule "35-fpga-standalone-appliance-pcb"]
+	path = 35-fpga-standalone-appliance-pcb
+	url = https://github.com/adilsondias-engineer/35-fpga-standalone-appliance-pcb.git
 [submodule "36-cpp-bbo-ingress-low-latency"]
 	path = 36-cpp-bbo-ingress-low-latency
 	url = https://github.com/adilsondias-engineer/36-cpp-bbo-ingress-low-latency.git
+[submodule "37-cpp-order-gateway-distribution"]
+	path = 37-cpp-order-gateway-distribution
+	url = https://github.com/adilsondias-engineer/37-cpp-order-gateway-distribution
+[submodule "38-fpga-order-book-10gbe"]
+	path = 38-fpga-order-book-10gbe
+	url = https://github.com/adilsondias-engineer/38-fpga-order-book-10gbe.git
