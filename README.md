@@ -32,7 +32,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 **Performance:** ~50-80ns PHY latency, hardware-validated quality  
 **Target:** Education, research, small trading firms, hobbyists
 
-[**→ View Source Code**](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | [**→ Documentation**](#10gbe-and-multi-fpga-projects-projects-31-35) |
+[**→ View Source Code**](https://github.com/adilsondias-engineer/33-fpga-10gbe-phy-custom) | [**→ Documentation**](#10gbe-and-multi-fpga-projects-projects-31-35) |
 
 ## Profile
 
@@ -723,17 +723,17 @@ Projects are organized chronologically by development order:
 | **29** | [cpp-trading-ui](https://github.com/adilsondias-engineer/29-cpp-trading-ui) |  SDL2 DRM/KMS control panel |
 | **30** | [custom-linux-trading-os](https://github.com/adilsondias-engineer/30-custom-linux-trading-os) |  TradingOS custom Linux (Buildroot, RT kernel) |
 | **36** | [cpp-bbo-ingress-low-latency](https://github.com/adilsondias-engineer/36-cpp-bbo-ingress-low-latency) |  DPDK kernel bypass (NASDAQ tested, sub-50ns parsing, P99/P50 < 2.5x) |
-| **37** | [order-gateway-distribution](https://github.com/adilsondias-engineer/37-order-gateway-distribution) |  BBO distribution gateway (TCP/MQTT/Kafka from shared memory) |
+| **37** | [cpp-order-gateway-distribution](https://github.com/adilsondias-engineer/37-cpp-order-gateway-distribution) |  BBO distribution gateway (TCP/MQTT/Kafka from shared memory) |
 
 #### 10GbE and Multi-FPGA Projects (ALINX AX7325B - Kintex-7)
 | Project | Repository | Description |
 |---------|------------|-------------|
 | **31** | [10gbe-uart-debug](https://github.com/adilsondias-engineer/31-10gbe-uart-debug) | 10GbE UDP with vendor IP + UART debug |
 | **32** | [10gbe-open](https://github.com/adilsondias-engineer/32-10gbe-open) | Open-source 10GbE (verilog-ethernet library) |
-| **33** | [10gbe-phy-custom](https://github.com/adilsondias-engineer/33-10gbe-phy-custom) | Custom 10GBASE-R PHY in VHDL (no vendor IP) |
-| **34** | [tcp-itch-parser](https://github.com/adilsondias-engineer/34-tcp-itch-parser) | Dual-protocol ITCH parser (NASDAQ UDP + ASX TCP) |
-| **35** | [standalone-appliance-pcb](https://github.com/adilsondias-engineer/35-standalone-appliance-pcb) | 3-FPGA trading appliance PCB (KiCad, 8-layer) |
-| **38** | [order-book-10gbe](https://github.com/adilsondias-engineer/38-order-book-10gbe) |  FPGA order book with 10GbE UDP TX (8 symbols, WNS +0.640ns) |
+| **33** | [fpga-10gbe-phy-custom](https://github.com/adilsondias-engineer/33-fpga-10gbe-phy-custom) | Custom 10GBASE-R PHY in VHDL (no vendor IP) |
+| **34** | [fpga-tcp-itch-parser](https://github.com/adilsondias-engineer/34-fpga-tcp-itch-parser) | Dual-protocol ITCH parser (NASDAQ UDP + ASX TCP) |
+| **35** | [fpga-standalone-appliance-pcb](https://github.com/adilsondias-engineer/35-fpga-standalone-appliance-pcb) | 3-FPGA trading appliance PCB (KiCad, 8-layer) |
+| **38** | [fpga-order-book-10gbe](https://github.com/adilsondias-engineer/38-fpga-order-book-10gbe) |  FPGA order book with 10GbE UDP TX (8 symbols, WNS +0.640ns) |
 
 ### Cloning Instructions
 
