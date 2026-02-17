@@ -715,7 +715,7 @@ Ethernet → UDP/IP Parser → ITCH 5.0 Decoder → Order Book → BBO Tracker �
 
 ## Complete System Architecture
 
-![System Architecture](images/system_architecture.png)
+![System Architecture](images/system_architecture2.png)
 
 **Protocol Selection Strategy:**
 
