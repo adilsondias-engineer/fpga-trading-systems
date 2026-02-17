@@ -517,7 +517,7 @@ Each project includes:
 
 **Visual System Architecture:**
 
-![System Architecture](docs/images/system_architecture2.png)
+![System Architecture](docs/images/systems_architecture2.png)
 
 *Complete end-to-end trading system showing FPGA → C++ Gateway → Multi-Protocol Distribution (TCP/MQTT/Kafka) → Applications (Desktop/Mobile/IoT)*
 
