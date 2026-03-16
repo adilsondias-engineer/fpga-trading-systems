@@ -52,6 +52,9 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 | Digilent Arty A7-100T | Artix-7 XC7A100T-1CSG324C | 100 MHz MII Ethernet, UART, GPIO | 1-19 |
 | ALINX AX7203 | Artix-7 XC7A200T-2FBG484I | Gigabit RGMII, PCIe Gen2 x4, DDR3 | 20-23, 30 |
 | ALINX AX7325B | Kintex-7 XC7K325T-2FFG900I | 4x 10GbE (SFP+), XGMII, PCIe Gen2 x8, DDR3 | 31-35, 38 |
+| Genesys 2 | Kintex-7 XC7K325T-2FFG900C | 1GbE Ethernet PHY, RGMII, No PCIe, DDR3 | None |
+| ALINX VD100 | Versal AI Edge Series XCVE2302-SFVA784-1LP-E-S | 2x 10GbE (SFP+), XGMII, PCIe Gen4 x4, DDR4 | Coming soon |
+| DE10-Lite | Altera MAX® 10 10M50DAF484C7G  | No network, No PCIe, No DDR 64MB SDRAM | Coming soon |
 
 <img src="docs/images/my_fpgas.jpeg" alt="My FPGAs" width="1920">
 
@@ -68,7 +71,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 - **Memory:** 1 GB DDR3 SDRAM
 - **Debug:** UART, LEDs, user buttons
 - **Use Case:** Gigabit Ethernet ITCH feed, PCIe BBO streaming to host
-- 
+
 ### ALINX AX7325B (10GbE Projects)
 - **FPGA:** Kintex-7 XC7K325T-2FFG900I (326K logic cells, 16.0 Mb BRAM, 840 DSP slices)
 - **High-Speed:** 8x GTX transceivers (10.3125 Gbps), 4x SFP+ cages
@@ -78,10 +81,32 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 - **Debug:** UART, LEDs, user buttons
 - **Use Case:** 10GbE ITCH market data feed, custom PHY for low-latency inter-FPGA links, multi-FPGA trading appliance
 
+### Genesys 2 (No Projects)
+- **FPGA:** Kintex-7 XC7K325T-2FFG900C (326K logic cells, 16.0 Mb BRAM, 840 DSP slices)
+- **High-Speed:** 8x GTX transceivers (10.3125 Gbps), 4x SFP+ cages
+- **Ethernet:** 10GBASE-R via GTX, XGMII interface (10 Gbps)
+- **PCIe:** No PCIe
+- **Memory:** DDR3
+- **Debug:** UART, LEDs, user buttons
+
+### ALINX VD100 (No Projects yet)
+- **FPGA:** Versal AI Edge Series XCVE2302-SFVA784-1LP-E-S
+- **SoC:** AMD Versal™ AI Edge SoC( Dual-core Arm® Cortex-A72, Dual-core Arm Cortex-R5F)
+- **High-Speed:** 8x GTYP transceivers, 2x SFP+(12.5Gbps) cages
+- **Ethernet:** 2x 10GbE (SFP+) for PL, XGMII, 1X 1GbE RGMII for PL and 1X 1GbE RGMII for PS
+- **PCIe:** PCIe Gen4 x4
+- **Memory:** DDR4 4GB RAM
+- **Debug:** UART, LEDs, user buttons
+
+### DE10-Lite (No Projects yet)
+- **FPGA:**  Altera MAX® 10 10M50DAF484C7G
+- **Ethernet:** None
+- **PCIe:** None
+- **Memory:**64MB SDRAM
+- **Debug:** UART, LEDs, user buttons
 
 ### Development Tools
 - AMD Vivado Design Suite 2024.x,2025.x
-- GHDL + GTKWave (simulation)
 - Python/Scapy (packet injection)
 - Linux XDMA driver (PCIe)
 
