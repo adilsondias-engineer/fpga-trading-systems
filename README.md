@@ -38,7 +38,6 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 
 **Technical Background:**
 - 20+ years C++ systems engineering (distributed systems, real-time processing, network protocols)
-- FPGA hardware acceleration specialist on trading infrastructure
 
 **Domain Expertise:** Combining software engineering experience with active trading knowledge to build FPGA-based market data systems and order management infrastructure.
 
