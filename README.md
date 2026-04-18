@@ -88,7 +88,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 - **Memory:** DDR3
 - **Debug:** UART, LEDs, user buttons
 
-### ALINX VD100 (No Projects yet)
+### ALINX VD100 (Look for vd100 projects in my repo)
 - **FPGA:** Versal AI Edge Series XCVE2302-SFVA784-1LP-E-S
 - **SoC:** AMD Versal™ AI Edge SoC( Dual-core Arm® Cortex-A72, Dual-core Arm Cortex-R5F)
 - **High-Speed:** 8x GTYP transceivers, 2x SFP+(12.5Gbps) cages
@@ -96,7 +96,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 - **PCIe:** PCIe Gen4 x4
 - **Memory:** DDR4 4GB RAM
 - **Debug:** UART, LEDs, user buttons
-
+- **Repos:** [versal-ai-edge-vd100-linux](https://github.com/adilsondias-engineer/versal-ai-edge-vd100-linux)
 ### DE10-Lite (No Projects yet)
 - **FPGA:**  Altera MAX® 10 10M50DAF484C7G
 - **Ethernet:** None
