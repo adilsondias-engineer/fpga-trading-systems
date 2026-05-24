@@ -115,14 +115,14 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 - **FPGA:**  Altera MAX® 10 10M50DAF484C7G
 - **Ethernet:** None
 - **PCIe:** None
-- **Memory:**64MB SDRAM
+- **Memory:** 64MB SDRAM
 - **Debug:** UART, LEDs, user buttons
 
 ### Pynq-Z2 (In progress)
 - **FPGA:**  Pynq-Z2 | Zynq-7020 MPSoc
 - **Ethernet:**  1Gbe Ethernet RGMII
 - **PCIe:** None
-- **Memory:**64MB SDRAM
+- **Memory:** 64MB SDRAM
 - **Debug:** UART, LEDs, user buttons
 
 ### Zynq UltraScale+ (In progress)
