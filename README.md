@@ -125,7 +125,7 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 - **Memory:**64MB SDRAM
 - **Debug:** UART, LEDs, user buttons
 
-### DE10-Lite (No Projects yet)
+### Zynq UltraScale+ (In progress)
 - **FPGA:**  AMD/Xilinx's Zynq™ UltraScale+™ MPSoC XCZU3EG-1SFVC784I Adaptive SoC
 - **Ethernet:** 2x 1Gbe Ethernet RGMII
 - **PCIe:** None
