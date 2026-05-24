@@ -1,3 +1,7 @@
+# Ultra-Low Latency FPGA Trading System & HFT Infrastructure
+
+[![License: MIT](https://shields.io)](https://opensource.org)
+[![Language: C++20](https://shields.io)]()
 ![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red) 
 ![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Kintex--7-blue)
 ![Custom 10GbE](https://img.shields.io/badge/10GBASE--R-Custom%20PHY-gold)
@@ -6,11 +10,11 @@
 ![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
 ![Projects](https://img.shields.io/badge/Projects-38-brightgreen)
 ![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
-![Language](https://img.shields.io/badge/Language-VHDL-blue)
+![Language: VHDL](https://img.shields.io/badge/Language-VHDL-blue)
 ![40G Design](https://img.shields.io/badge/40GBASE--R4-Design%20Complete-blue)
 # FPGA Trading Systems
 
-Hardware-accelerated market data processing and order book management for low-latency trading systems. Features **custom 10GBASE-R PHY (zero vendor IP)**, NASDAQ ITCH 5.0 protocol parsing, hardware order book with sub-microsecond latency, and advanced clock domain crossing architecture.
+End-to-end High-Frequency Trading (HFT) infrastructure framework. This repository features a full hardware-software co-design: a custom **VHDL 10GBASE-R PHY networking stack** running on an FPGA, tightly coupled with an ultra-low latency **C++20 kernel bypass subsystem** using DPDK and Linux XDP (eBPF). Hardware-accelerated market data processing and order book management for low-latency trading systems. Features **custom 10GBASE-R PHY (zero vendor IP)**, NASDAQ ITCH 5.0 protocol parsing, hardware order book with sub-microsecond latency, and advanced clock domain crossing architecture.
 
 ---
 
@@ -41,6 +45,13 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 
 **Domain Expertise:** Combining software engineering experience with active trading knowledge to build FPGA-based market data systems and order management infrastructure.
 
+## Key Architectural Features
+
+* **Custom VHDL 10GBASE-R PHY & MAC**: Full RTL implementation of the 10GbE physical layer, bypassing heavy vendor IP blocks to minimize deterministic jitter.
+* **Hardware-Accelerated Market Data Parser**: Real-time decoding of **NASDAQ ITCH 5.0** protocol directly in FPGA fabric at line rate.
+* **Deterministic Order Book Execution Engine**: Ultra-low latency bitmask-based price level tracking implemented in hardware.
+* **C++20 Kernel Bypass Network Stack**: High-throughput software data plane utilizing **DPDK (Data Plane Development Kit)** and **XDP (eBPF)** for sub-microsecond packet processing.
+* **Zero-Copy PCIe DMA Subsystem**: Custom ring-buffer memory management for scatter-gather DMA transfers between FPGA block RAM and host CPU memory.
 
 ## Hardware
 
