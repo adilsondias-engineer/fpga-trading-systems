@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use or reference this HFT infrastructure framework in an academic or industrial context, please cite it as below."
+authors:
+- family-names: "Dias"
+  given-names: "Adilson"
+title: "Production-Grade Low-Latency FPGA Trading System with Custom 10GbE PHY and C++ Kernel Bypass"
+version: "1.0.0"
+date-released: 2026-05-24
+url: "https://github.com"
