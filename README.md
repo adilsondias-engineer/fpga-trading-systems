@@ -1,6 +1,6 @@
 # Ultra-Low Latency FPGA Trading System & HFT Infrastructure
 
-[![License: MIT](https://shields.io/badge/License-MIT-green)](https://opensource.org)
+[![License: Apache 2.0](https://shields.io/badge/License-Apache 2.0-green)](https://opensource.org)
 [![Language: C++20](https://shields.io/badge/Language-C++-blue)]()
 ![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red) 
 ![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Kintex--7-blue)
