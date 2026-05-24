@@ -63,8 +63,10 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 | ALINX AX7203 | Artix-7 XC7A200T-2FBG484I | Gigabit RGMII, PCIe Gen2 x4, DDR3 | 20-23, 30 |
 | ALINX AX7325B | Kintex-7 XC7K325T-2FFG900I | 4x 10GbE (SFP+), XGMII, PCIe Gen2 x8, DDR3 | 31-35, 38 |
 | Genesys 2 | Kintex-7 XC7K325T-2FFG900C | 1GbE Ethernet PHY, RGMII, No PCIe, DDR3 | None |
-| ALINX VD100 | Versal AI Edge Series XCVE2302-SFVA784-1LP-E-S | 2x 10GbE (SFP+), XGMII, PCIe Gen4 x4, DDR4 | Coming soon |
+| ALINX VD100 | Versal AI Edge Series XCVE2302-SFVA784-1LP-E-S | 2x 10GbE (SFP+), XGMII, PCIe Gen4 x4, DDR4, MPSoc | Check vd100 projects on my repo |
 | DE10-Lite | Altera MAX® 10 10M50DAF484C7G  | No network, No PCIe, No DDR 64MB SDRAM | Coming soon |
+| Pynq-Z2 | Zynq-7020 | 1Gbe Ethernet RGMII, No PCIe, HDMI, USB, Audio, DDR3,  MPSoc  | In progress |
+| Zynq UltraScale+ | AMD/Xilinx's Zynq™ UltraScale+™ MPSoC XCZU3EG-1SFVC784I Adaptive SoC | 2x 1Gbe Ethernet RGMII, No PCIe, DP, USB, Audio, 4Gb DDR4 PS, 1Gb DDR4 PL, 1x M.2 Card,  MPSoc  | In progress |
 
 <img src="docs/images/my_fpgas.jpeg" alt="My FPGAs" width="1920">
 
@@ -108,11 +110,26 @@ Implemented IEEE 802.3ae 10GBASE-R from scratch in VHDL (Projects 33-34, 38):
 - **Memory:** DDR4 4GB RAM
 - **Debug:** UART, LEDs, user buttons
 - **Repos:** [versal-ai-edge-vd100-linux](https://github.com/adilsondias-engineer/versal-ai-edge-vd100-linux)
+
 ### DE10-Lite (No Projects yet)
 - **FPGA:**  Altera MAX® 10 10M50DAF484C7G
 - **Ethernet:** None
 - **PCIe:** None
 - **Memory:**64MB SDRAM
+- **Debug:** UART, LEDs, user buttons
+
+### Pynq-Z2 (In progress)
+- **FPGA:**  Pynq-Z2 | Zynq-7020 MPSoc
+- **Ethernet:**  1Gbe Ethernet RGMII
+- **PCIe:** None
+- **Memory:**64MB SDRAM
+- **Debug:** UART, LEDs, user buttons
+
+### DE10-Lite (No Projects yet)
+- **FPGA:**  AMD/Xilinx's Zynq™ UltraScale+™ MPSoC XCZU3EG-1SFVC784I Adaptive SoC
+- **Ethernet:** 2x 1Gbe Ethernet RGMII
+- **PCIe:** None
+- **Memory:** 4Gb DDR4 PS, 1Gb DDR4 PL
 - **Debug:** UART, LEDs, user buttons
 
 ### Development Tools
