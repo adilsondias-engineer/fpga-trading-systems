@@ -2,16 +2,15 @@
 
 [![License: Apache 2.0](https://shields.io/badge/License-Apache%202.0-green)](https://opensource.org)
 [![Language: C++20](https://shields.io/badge/Language-C++-blue)]()
-![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red) 
-![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Kintex--7-blue)
-![Custom 10GbE](https://img.shields.io/badge/10GBASE--R-Custom%20PHY-gold)
-![No Vendor IP](https://img.shields.io/badge/Vendor%20IP-Zero-success)
-![Open Source](https://img.shields.io/badge/License-Apache%202.0-blue)
-![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)
-![Projects](https://img.shields.io/badge/Projects-38-brightgreen)
-![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)
-![Language: VHDL](https://img.shields.io/badge/Language-VHDL-blue)
-![40G Design](https://img.shields.io/badge/40GBASE--R4-Design%20Complete-blue)
+[![Language: VHDL](https://img.shields.io/badge/Language-VHDL-blue)]()
+[![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Artix--7-red)]() 
+[![FPGA](https://img.shields.io/badge/FPGA-Xilinx%20Kintex--7-blue)]()
+[![Custom 10GbE](https://img.shields.io/badge/10GBASE--R-Custom%20PHY-gold)]()
+[![No Vendor IP](https://img.shields.io/badge/Vendor%20IP-Zero-success)]()
+[![Hardware Verified](https://img.shields.io/badge/Hardware-Verified-brightgreen)]()
+[![Projects](https://img.shields.io/badge/Projects-38-brightgreen)]()
+[![Latency](https://img.shields.io/badge/E2E%20Latency-14.78μs-blue)]()
+[![40G Design](https://img.shields.io/badge/40GBASE--R4-Design%20Complete-blue)]()
 # FPGA Trading Systems
 
 End-to-end High-Frequency Trading (HFT) infrastructure framework. This repository features a full hardware-software co-design: a custom **VHDL 10GBASE-R PHY networking stack** running on an FPGA, tightly coupled with an ultra-low latency **C++20 kernel bypass subsystem** using DPDK and Linux XDP (eBPF). Hardware-accelerated market data processing and order book management for low-latency trading systems. Features **custom 10GBASE-R PHY (zero vendor IP)**, NASDAQ ITCH 5.0 protocol parsing, hardware order book with sub-microsecond latency, and advanced clock domain crossing architecture.
